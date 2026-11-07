@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "classification": "deterministic synthetic fixture planner",
+  "protocol": {
+    "version": "2026-07-28",
+    "era": "modern",
+    "advertisedToolCount": 8
+  },
+  "trigger": {
+    "eventId": "event_d47e1b49-da5c-401f-9e7c-0b74c0a10cf4",
+    "eventType": "IncidentOpened",
+    "committed": true,
+    "snapshotRevision": 6,
+    "policyRevision": 1
+  },
+  "planner": {
+    "toolBudget": 8,
+    "callsUsed": 7,
+    "submitCalls": 1,
+    "trace": {
+      "incidentTitle": "Injected suspicious scheduler observation",
+      "evidenceCount": 1,
+      "graphRevision": 6,
+      "simulationEvaluations": 4,
+      "fallbackCount": 1,
+      "taskCount": 2
+    }
+  },
+  "firstExecution": {
+    "id": "run_ed156e46-7034-40ef-9ffb-e8b1f3fa0e5c",
+    "state": "proposed",
+    "eventId": "event_d47e1b49-da5c-401f-9e7c-0b74c0a10cf4",
+    "snapshotRevision": 6,
+    "policyRevision": 1,
+    "attempts": 1,
+    "toolCalls": 7,
+    "submitCalls": 1,
+    "outputBytes": 6017,
+    "result": {
+      "outcome": "proposed",
+      "proposalId": "proposal_durable_fixture_run"
+    },
+    "errorCode": null
+  },
+  "restartReplay": {
+    "run": {
+      "id": "run_ed156e46-7034-40ef-9ffb-e8b1f3fa0e5c",
+      "state": "proposed",
+      "eventId": "event_d47e1b49-da5c-401f-9e7c-0b74c0a10cf4",
+      "snapshotRevision": 6,
+      "policyRevision": 1,
+      "attempts": 1,
+      "toolCalls": 7,
+      "submitCalls": 1,
+      "outputBytes": 6017,
+      "result": {
+        "outcome": "proposed",
+        "proposalId": "proposal_durable_fixture_run"
+      },
+      "errorCode": null
+    },
+    "sameRunId": true,
+    "plannerOrToolCalls": 0
+  },
+  "canonicalProposal": {
+    "id": "proposal_durable_fixture_run",
+    "persistedCount": 1
+  },
+  "boundaries": [
+    "No provider credential or model API is used; the planner is deterministic fixture code.",
+    "The run can read, simulate, and submit one proposal. It cannot approve or execute infrastructure actions.",
+    "All data and identities are fictional, local, and synthetic."
+  ]
+}

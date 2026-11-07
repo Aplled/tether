@@ -1,0 +1,241 @@
+{
+  "schema": "hackutd.mesh.demo.evidence.v1",
+  "generatedAt": "2026-11-07T10:01:57.961Z",
+  "scope": {
+    "organizationId": "org_pantry_demo",
+    "incidentId": "incident_scheduler_suspicion"
+  },
+  "topology": {
+    "logicalPeers": 3,
+    "processes": "separate child processes",
+    "transport": "length-prefixed JSON over loopback TCP",
+    "adjacency": [
+      "peer-a<->peer-b",
+      "peer-b<->peer-c"
+    ],
+    "directAtoCBlocked": true,
+    "physicalDeviceMeshVerified": false
+  },
+  "crypto": {
+    "sealedBox": "libsodium crypto_box_seal",
+    "senderAuthentication": "Ed25519 signature over canonical full protected envelope",
+    "recipientReceipt": "Ed25519 signed and bound to message/scope/outcome",
+    "relayCannotDecrypt": true
+  },
+  "persistence": {
+    "recipientStoppedBeforeSecondMessage": true,
+    "statusAfterRelayCustody": "in_custody",
+    "relayHadDurableCustody": true,
+    "relayKilledAfterCustody": true,
+    "relayRestartedWithSameStore": true,
+    "recipientRestartedWithSameStore": true
+  },
+  "messages": [
+    {
+      "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+      "status": {
+        "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "state": "recipient_acknowledged",
+        "recipientReceipt": {
+          "protocol": "hackutd.mesh.v1",
+          "receiptType": "recipient.receipt",
+          "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+          "senderId": "peer-a",
+          "organizationId": "org_pantry_demo",
+          "incidentId": "incident_scheduler_suspicion",
+          "recipientId": "peer-c",
+          "envelopeDigest": "a2f5dd1e1cdb6656c5709d8234dce788dbeef03c1623ba9e60b3a9e123448043",
+          "outcome": "accepted",
+          "receivedAt": "2026-11-07T10:01:57.097Z",
+          "signature": "r3Kc2rtyBFCghuHZRNv69kbjbg0tfzQiAGZvEPMqwHR7Go5hiMsvtDNkH4bLMNbRzaEMNxOz9BCNa3w95FrsCg=="
+        }
+      }
+    },
+    {
+      "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+      "status": {
+        "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+        "state": "recipient_acknowledged",
+        "recipientReceipt": {
+          "protocol": "hackutd.mesh.v1",
+          "receiptType": "recipient.receipt",
+          "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+          "senderId": "peer-a",
+          "organizationId": "org_pantry_demo",
+          "incidentId": "incident_scheduler_suspicion",
+          "recipientId": "peer-c",
+          "envelopeDigest": "2135d1ad38a80792cb359b03d71e16916b571d414c44367285c1498ece92dc89",
+          "outcome": "accepted",
+          "receivedAt": "2026-11-07T10:01:57.955Z",
+          "signature": "tKh47KLwWoa2SVi6CRgfHVTNu9gtJZoKUTZ+Q1GMljIYSj+E/rNZm0KMjYOHsHFD0GvWFx/EwoG6rKt5T6hJDw=="
+        }
+      }
+    }
+  ],
+  "recipientInbox": [
+    {
+      "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+      "senderId": "peer-a",
+      "organizationId": "org_pantry_demo",
+      "incidentId": "incident_scheduler_suspicion",
+      "receivedAt": "2026-11-07T10:01:57.097Z",
+      "body": {
+        "kind": "coordination.message",
+        "text": "Incident incident_scheduler_suspicion: independently verified containment execution 11576131-be09-40a7-8017-4b45911dd63f; fallback fallback_backup_roster approved."
+      }
+    },
+    {
+      "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+      "senderId": "peer-a",
+      "organizationId": "org_pantry_demo",
+      "incidentId": "incident_scheduler_suspicion",
+      "receivedAt": "2026-11-07T10:01:57.955Z",
+      "body": {
+        "kind": "coordination.task_claim",
+        "text": "Claim persisted tasks task_roster, task_checkin for verified fallback coordination."
+      }
+    }
+  ],
+  "relayRestartEvents": [
+    {
+      "at": "2026-11-07T10:01:57.081Z",
+      "kind": "peer_started",
+      "detail": {
+        "peerId": "peer-b",
+        "port": 61079
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.094Z",
+      "kind": "relay_custody",
+      "detail": {
+        "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "recipientId": "peer-c"
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.100Z",
+      "kind": "custody_acknowledged",
+      "detail": {
+        "queueId": "env:5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "nextPeer": "peer-c",
+        "duplicate": false
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.103Z",
+      "kind": "custody_acknowledged",
+      "detail": {
+        "queueId": "receipt:5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "nextPeer": "peer-a",
+        "duplicate": false
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.203Z",
+      "kind": "relay_custody",
+      "detail": {
+        "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+        "recipientId": "peer-c"
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.449Z",
+      "kind": "peer_started",
+      "detail": {
+        "peerId": "peer-b",
+        "port": 61079
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.958Z",
+      "kind": "custody_acknowledged",
+      "detail": {
+        "queueId": "env:44a68079-9de9-4ad3-8c22-c461277b2752",
+        "nextPeer": "peer-c",
+        "duplicate": false
+      }
+    },
+    {
+      "at": "2026-11-07T10:01:57.961Z",
+      "kind": "custody_acknowledged",
+      "detail": {
+        "queueId": "receipt:44a68079-9de9-4ad3-8c22-c461277b2752",
+        "nextPeer": "peer-a",
+        "duplicate": false
+      }
+    }
+  ],
+  "limitations": [
+    "All peers share one OS user and host failure boundary.",
+    "SQLite stores envelopes and private identity files are local plaintext with 0600 permissions; no OS keychain or encrypted-at-rest claim.",
+    "A mutable hop limit bounds honest forwarding but is not an authenticated security guarantee against a malicious relay.",
+    "A relay can drop, delay, reorder, duplicate, and observe metadata."
+  ],
+  "publicPeers": {
+    "peer-a": {
+      "peerId": "peer-a",
+      "signingPublicKey": "VhDG9Jj9z7ojPeKIYj2IDh5nNVhJS3q+w05834I8MRU=",
+      "boxPublicKey": "XpAuhjTF8zO1SbLinH45YqEShbRelRuc9s/yBzhvonY=",
+      "organizationId": "org_pantry_demo",
+      "membershipVersion": 1
+    },
+    "peer-b": {
+      "peerId": "peer-b",
+      "signingPublicKey": "ZrpFmzVeAuv3Bi1oEIquwgK+jgVRYhxgOqT/Y56h0a0=",
+      "boxPublicKey": "e0XzQqyF1LLEtKQzLlzkEMSthJ/HsxVY4isEqAUQyzo=",
+      "organizationId": "org_pantry_demo",
+      "membershipVersion": 1
+    },
+    "peer-c": {
+      "peerId": "peer-c",
+      "signingPublicKey": "cisXnHm54X2OP3cPn7t9sAkTpfpMXlps6jfy8G/Ao1A=",
+      "boxPublicKey": "Vo+XaspQxJiBKXhlp5l0gD6uC/pTaPfNcNP0GQG1Qi0=",
+      "organizationId": "org_pantry_demo",
+      "membershipVersion": 1
+    }
+  },
+  "independentCryptographicChecks": [
+    {
+      "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+      "senderSignatureValid": true,
+      "recipientSignatureValid": true,
+      "exactEnvelopeBinding": true,
+      "envelopeDigest": "a2f5dd1e1cdb6656c5709d8234dce788dbeef03c1623ba9e60b3a9e123448043",
+      "protectedEnvelope": {
+        "protocol": "hackutd.mesh.v1",
+        "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "senderId": "peer-a",
+        "recipientId": "peer-c",
+        "organizationId": "org_pantry_demo",
+        "incidentId": "incident_scheduler_suspicion",
+        "membershipVersion": 1,
+        "createdAt": "2026-11-07T10:01:57.090Z",
+        "expiresAt": "2026-11-07T10:02:27.091Z",
+        "ciphertext": "0qH+LA2ViB5nifvclxfuOSDz2XGIXOH3qS3VKiIheUawu5gi+qP54r7m3O86KGItP16zfZS7C9fWNnluI6z1ze6xJD16kuYRV65PExaO0SxEFYUS4nWYBR2EE7oVLk7Y7Wtg1ue15rIAht3LY54FsSlHiU8c6Y3AZtDpLdplwoTMVaPfXRp2tQsBVnoFWQSvi2es673WjRW0X3ONUSAwgVWJbJnf/1kJ0csHvATLt7AGLEyNDDUbpb3WgNU9mZw9gEPY6yP6fNCCb4FIQhpkhQWMuo3zFh1gKaIz4Ha7e1EvE1WL0wjkSxGe05qJfdtVZcj/iiv/fsavjsUO",
+        "signature": "cp+KtQIgJTHeM+z86/SJns36IWnzyCojhxc5gVE64j7yjOKwoo65MUhmdnvy4ZR8PvQ5sSYTBOsnpHNYY57vDw=="
+      }
+    },
+    {
+      "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+      "senderSignatureValid": true,
+      "recipientSignatureValid": true,
+      "exactEnvelopeBinding": true,
+      "envelopeDigest": "2135d1ad38a80792cb359b03d71e16916b571d414c44367285c1498ece92dc89",
+      "protectedEnvelope": {
+        "protocol": "hackutd.mesh.v1",
+        "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+        "senderId": "peer-a",
+        "recipientId": "peer-c",
+        "organizationId": "org_pantry_demo",
+        "incidentId": "incident_scheduler_suspicion",
+        "membershipVersion": 1,
+        "createdAt": "2026-11-07T10:01:57.201Z",
+        "expiresAt": "2026-11-07T10:02:27.201Z",
+        "ciphertext": "n6Agw64Ro6jtV/+gWEmeDZXPDzRZ0YhZw+bTyM4et2+go0mLuQTvNtV/fWZpGxXl3iIe4NibmxMRS/FOBwK4vuTYX+Dt3xqPJFe9p0PvAOZtU9qGsbCe0VzRSb/f7eOYG/zpNaptXODE2WAlynLbtiPEPhRIGdXQTfjC6Tt/cXbap3LdhPMPMwiiE98c1qImfZxyVHxtuLRuLN9CLLaVMiyRRFR/VxOwv/1Ax5AqwA==",
+        "signature": "tNFPkN8j38HO87AV5wTGPuadr+W/41kaUw5WbpIM3N19qUks+iMrI/mbyEh6T9pIPkUxAo7VG1DN5ISETTnFDg=="
+      }
+    }
+  ],
+  "historicalProof": true
+}

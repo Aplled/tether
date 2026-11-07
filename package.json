@@ -1,0 +1,29 @@
+{
+  "name": "hackutd-continuity-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-test-coverage packages/*/test/*.test.ts integration-tests/*.test.ts",
+    "demo": "node scripts/demo.ts",
+    "agent:demo": "node scripts/agent-run-demo.ts",
+    "demo:mesh": "node scripts/mesh-demo.ts",
+    "mcp:smoke": "node scripts/mcp-smoke.ts",
+    "mcp:tool": "node scripts/mcp-tool.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/server": "2.4.0",
+    "libsodium-wrappers": "0.8.4",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  }
+}

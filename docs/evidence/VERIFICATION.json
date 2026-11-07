@@ -1,0 +1,230 @@
+{
+  "schema": "hackutd.final-verification.v1",
+  "verifiedAt": "2026-11-07T10:05:04.291Z",
+  "runtime": {
+    "node": "v26.13.0",
+    "npm": "11.20.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "privateOfficialRuntime": true,
+    "globalRuntimeChanged": false
+  },
+  "method": "Isolated eligible-source copy with no copied node_modules; fresh npm ci --ignore-scripts, reusing the same checksum-verified private runtime. Final formatting-only file sync preceded the final complete suite.",
+  "checks": {
+    "cleanInstall": true,
+    "dependencyAuditReportedVulnerabilities": 0,
+    "typecheck": true,
+    "tests": {
+      "count": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "prettier": true,
+    "modernMcp": {
+      "protocol": "2026-07-28",
+      "tools": 8,
+      "simulationNodes": 4
+    },
+    "integratedDemo": true,
+    "agentRunDemo": true,
+    "independentSenderAndRecipientSignaturePairs": 2,
+    "exactEnvelopeReceiptBindings": true
+  },
+  "sourceSnapshotSha256": "b18dc5c67c3c80c11f904ddd48e589f2bb3e4fc2f245e44d30d9d3fb64b67658",
+  "sourceFiles": [
+    {
+      "path": ".node-version",
+      "sha256": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f"
+    },
+    {
+      "path": ".nvmrc",
+      "sha256": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f"
+    },
+    {
+      "path": "apps/agent-runtime/mcp-client.ts",
+      "sha256": "5f5e2966f12b046baeee31bf2fd85397bdbc1f0d197257b50a7b0e9a018fec7f"
+    },
+    {
+      "path": "apps/authority/index.ts",
+      "sha256": "76f5fb5f5cc60ec6888683b3f47991fcfc8818f065d45df89dc85226a1ec9b89"
+    },
+    {
+      "path": "apps/demo-broker/src/fixture-service.ts",
+      "sha256": "c5869159f22f521dfcc1c2393eb79b7ef2985206981b5708da35ed5c9812ed3d"
+    },
+    {
+      "path": "apps/demo-broker/src/index.ts",
+      "sha256": "6cd11a46c69121c1f3af1df7db0cec62fd7c779d29401d14034c81dc0f19f538"
+    },
+    {
+      "path": "apps/demo-broker/src/runtime.ts",
+      "sha256": "e41bafe4e348b7b6b770749d9908b42fd1a663960595100b51e73882d9bb1636"
+    },
+    {
+      "path": "apps/mcp-server/index.ts",
+      "sha256": "1be95af4065834d338b00a65e90293f47eab5dc2b86b05894d6c8ac468ecc24e"
+    },
+    {
+      "path": "apps/mesh-peer/index.ts",
+      "sha256": "c45ba2d757ddd4d629328c1a8909e35c100c145d9518fd984300f4793fe2e919"
+    },
+    {
+      "path": "fixtures/pantry/index.ts",
+      "sha256": "48596c6a110d7635a3d87a06f56bf010930d1a5c84621f4300e012c195b9be8d"
+    },
+    {
+      "path": "integration-tests/authority-mcp.test.ts",
+      "sha256": "7532391df222d0aa14752e0567183d26af473f0a1416fe8c274b5e85dd534abb"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "a13bba180624716b0088affd492555dae13509e1a39af16b0a5084bcf44ee8e8"
+    },
+    {
+      "path": "package.json",
+      "sha256": "1d646b304f94b7f95053862a3565870d7aaeba12a81669c9c2c240f58575b751"
+    },
+    {
+      "path": "packages/agent-orchestration/src/coordinator.ts",
+      "sha256": "5f7a5ff4fcb15bca2057627c6c19c3695e08457ce71609e64bbf61114399dc2d"
+    },
+    {
+      "path": "packages/agent-orchestration/src/index.ts",
+      "sha256": "981e80f21b29bb3cd21587fe84b90270127c938524c9e9049d21b6c0b1c7f626"
+    },
+    {
+      "path": "packages/agent-orchestration/test/coordinator.test.ts",
+      "sha256": "836715d5a45bf8b8ef650ca009df9ae9ab345a6b816d91f936c6d6d3900ed994"
+    },
+    {
+      "path": "packages/communications/core.ts",
+      "sha256": "4f248401b7d397b498de4a3e5f8cd2235f55b108b62b9b4d5a15208c5b870b84"
+    },
+    {
+      "path": "packages/communications/index.ts",
+      "sha256": "327b4452f7252d7bca582bcbbb4a91641dca348de268c6c65fbd5af288068719"
+    },
+    {
+      "path": "packages/communications/test/mesh.test.ts",
+      "sha256": "c277c3bae174d851d7fc92b89da8462116c6b67e628c155d9d1668ae8211d587"
+    },
+    {
+      "path": "packages/communications/test/security.test.ts",
+      "sha256": "ca7b7d32f5f78b8993d97bc5a95e6451ddc9ab6d37ccac9ece788f27485a65f0"
+    },
+    {
+      "path": "packages/communications/types.ts",
+      "sha256": "c2e966622b781cfd0367ec8528194f44ceb3b65a56721aaed92ef8d2e7e469c6"
+    },
+    {
+      "path": "packages/contracts/src/ids.ts",
+      "sha256": "95a1c79af3a6ccddb6f97870fa22717d35b69eab0e6c05f285d6ead10c7fc743"
+    },
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "f22ce7c7cc2cdb911bc9158294efed68e8b4f0718d195c98789e9280cda319c4"
+    },
+    {
+      "path": "packages/contracts/src/schemas.ts",
+      "sha256": "6a35478a8d22e75ed4e3ce575a681f4ef255b3284d2de63dd7c33f8e3ff529f9"
+    },
+    {
+      "path": "packages/graph-core/src/evaluate.ts",
+      "sha256": "faa360975623e2579b8d001c1c2b04863896306595e34271557904a7d10df742"
+    },
+    {
+      "path": "packages/graph-core/src/index.ts",
+      "sha256": "546d45a79e0946e7843d06f099899591bd904aa11f1035710b16283063e2cfd6"
+    },
+    {
+      "path": "packages/graph-core/test/evaluate.test.ts",
+      "sha256": "2f96d12e0f40916a70e5cb51decdae63235fbb83e66c79b8cb448ee83996b9d6"
+    },
+    {
+      "path": "packages/policy/src/index.ts",
+      "sha256": "2e2a5cfddf710537ae888ca0bb6ea94e4bad2ad7772db554fea876ab4223b1da"
+    },
+    {
+      "path": "packages/policy/test/policy.test.ts",
+      "sha256": "abec7d7d331c6bea4047a2a1bdec022f8cad3c1d1f3263afd2899ac8f3f4aaa1"
+    },
+    {
+      "path": "packages/response/src/index.ts",
+      "sha256": "aa70860133c4b89097a240d32926d26f55c885313be324a7fb2f0247f610728f"
+    },
+    {
+      "path": "packages/response/test/coordinator.test.ts",
+      "sha256": "a2776e9643bfc770264b51435819f98dc7e81e9770f0717e26472adfcab55f9c"
+    },
+    {
+      "path": "packages/storage/src/index.ts",
+      "sha256": "8c4e12d6bf7e028406f41bae72517bfe696d70e2eb467b5dd7b9fd9d4d210e08"
+    },
+    {
+      "path": "packages/storage/src/store.ts",
+      "sha256": "57e6c6e5ebaf79d7e851fab9bd6283810597517188e17d8f0d3834b6f8b7bf82"
+    },
+    {
+      "path": "packages/storage/test/store.test.ts",
+      "sha256": "0ffdc2aaec38d0af031d208bf905bf98ae506fd41ca5c6e028dbb75cc5c7186b"
+    },
+    {
+      "path": "packages/workflows/src/index.ts",
+      "sha256": "846f8aa599043c1e79f1ba809908cac686ba541af7e969ae7ef7f6722821c008"
+    },
+    {
+      "path": "packages/workflows/src/service.ts",
+      "sha256": "19dc6248460ac2c3d7b7e9a4d74fa8a06448b81dd9fcbae849fa994ef784cb47"
+    },
+    {
+      "path": "packages/workflows/test/service.test.ts",
+      "sha256": "f1c32421abb5a757ea134e2b5bc72fd0e9aaa9c2e06dd6b3355d0e30f2d0ed63"
+    },
+    {
+      "path": "scripts/agent-run-demo.ts",
+      "sha256": "7da53eb2f6bbb670a17dff72a2ca413d119f3a95894863f295cd13f20a505b2a"
+    },
+    {
+      "path": "scripts/bootstrap-runtime.sh",
+      "sha256": "8c86c2d8f5f7b8c2a3e08578fd612a0d634d74cf9a1c69429b6b40c3cb1053cd"
+    },
+    {
+      "path": "scripts/demo.ts",
+      "sha256": "de9d479a84b8f95ed45517006c887a42ec4fc21bc784241dfa23b5423ff5011a"
+    },
+    {
+      "path": "scripts/dev.sh",
+      "sha256": "2b6cbc81d6fe62ff7d6e71044e006e4f604b21f88431f7f524bd12c6feebd7f9"
+    },
+    {
+      "path": "scripts/mcp-smoke.ts",
+      "sha256": "e5804387c69a10c186f69d08a04b83d4b70927f854fce75b49a7ac02d8acdda8"
+    },
+    {
+      "path": "scripts/mcp-tool.ts",
+      "sha256": "4e714880ff4a47358d4db9f79447ae560c3924b332122eb2077abbb08d95a3fe"
+    },
+    {
+      "path": "scripts/mesh-demo.ts",
+      "sha256": "56c58c97b8b43288a09f734653c26e9e80743968f65155f419eafa8874f6240d"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "2df7cb368ff35ee65f0cfd3443b93e1b6a03095ed3454767fdf620486eafa136"
+    }
+  ],
+  "proofFiles": [
+    "FINAL-DEMO.json",
+    "MESH-PROOF.json",
+    "AGENT-RUN.json",
+    "AI-MCP-REVIEW.json"
+  ],
+  "limits": [
+    "Synthetic plaintext local storage only",
+    "Disposable process stop only",
+    "Three logical peers on one Mac; no physical/radio mesh proof",
+    "Scripted demo personas and deterministic planner; separate lead coding-agent MCP trace, no deployed external model inference",
+    "Response projection proof uses fault injection and DB reopen; relay recovery uses actual SIGKILL",
+    "Node November11 future security release must be reassessed when available"
+  ]
+}

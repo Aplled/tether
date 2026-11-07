@@ -1,0 +1,453 @@
+{
+  "schema": "hackutd.integrated.demo.v1",
+  "generatedAt": "2026-11-07T10:01:57.973Z",
+  "syntheticDataOnly": true,
+  "scriptedActors": [
+    "actor_commander",
+    "actor_verifier",
+    "actor_volunteer",
+    "actor_agent"
+  ],
+  "baseline": {
+    "result": "failed",
+    "schedulerReachable": true,
+    "controlReachable": true,
+    "brokerProcessState": "running",
+    "observation": {
+      "schemaVersion": 1,
+      "organizationId": "org_pantry_demo",
+      "incidentId": "incident_scheduler_suspicion",
+      "id": "evidence_scheduler_signal",
+      "subjectNodeId": "scheduler",
+      "source": "fictional independent demo verifier",
+      "kind": "observation",
+      "fact": "Synthetic exercise signal: unexpected scheduler behavior",
+      "observedAt": "2026-11-07T10:01:56.294Z",
+      "receivedAt": "2026-11-07T10:01:56.294Z",
+      "verification": "unverified",
+      "securityTrust": "unknown",
+      "freshness": "fresh",
+      "revision": 1
+    }
+  },
+  "mcp": {
+    "protocolVersion": "2026-07-28",
+    "protocolEra": "modern",
+    "toolNames": [
+      "get_incident",
+      "get_incident_timeline",
+      "get_dependencies",
+      "analyze_incident_impact",
+      "simulate_containment",
+      "list_fallback_plans",
+      "list_response_tasks",
+      "submit_response_proposal"
+    ],
+    "incident": {
+      "schemaVersion": 1,
+      "organizationId": "org_pantry_demo",
+      "id": "incident_scheduler_suspicion",
+      "title": "Injected suspicious scheduler observation",
+      "status": "open",
+      "affectedNodeIds": [
+        "scheduler"
+      ],
+      "evidenceIds": [],
+      "commanderActorId": "actor_commander",
+      "revision": 1,
+      "createdAt": "2026-11-07T08:00:00.000Z",
+      "updatedAt": "2026-11-07T08:00:00.000Z",
+      "evidence": [
+        {
+          "schemaVersion": 1,
+          "organizationId": "org_pantry_demo",
+          "incidentId": "incident_scheduler_suspicion",
+          "id": "evidence_scheduler_signal",
+          "subjectNodeId": "scheduler",
+          "source": "fictional independent demo verifier",
+          "kind": "observation",
+          "fact": "Synthetic exercise signal: unexpected scheduler behavior",
+          "observedAt": "2026-11-07T10:01:56.294Z",
+          "receivedAt": "2026-11-07T10:01:56.294Z",
+          "verification": "unverified",
+          "securityTrust": "unknown",
+          "freshness": "fresh",
+          "revision": 1
+        }
+      ],
+      "evidencePage": {
+        "returned": 1,
+        "total": 1,
+        "truncated": false
+      }
+    },
+    "dependencyCount": 4,
+    "impact": {
+      "organizationId": "org_pantry_demo",
+      "algorithmVersion": "dependency-v1",
+      "graphRevision": 6,
+      "evaluations": {
+        "backup_roster": {
+          "nodeId": "backup_roster",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "unknown",
+          "degraded": false,
+          "reasons": [
+            "No external evidence or resolved dependency basis"
+          ],
+          "paths": [
+            [
+              "backup_roster"
+            ]
+          ]
+        },
+        "distribution": {
+          "nodeId": "distribution",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "fresh",
+          "degraded": true,
+          "reasons": [
+            "distribution_communications[ALL]: phone_tree=unknown(optional)",
+            "distribution_schedule_source[ANY]: scheduler=unknown, backup_roster=unknown"
+          ],
+          "paths": [
+            [
+              "distribution",
+              "scheduler"
+            ]
+          ]
+        },
+        "phone_tree": {
+          "nodeId": "phone_tree",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "unknown",
+          "degraded": false,
+          "reasons": [
+            "No external evidence or resolved dependency basis"
+          ],
+          "paths": [
+            [
+              "phone_tree"
+            ]
+          ]
+        },
+        "scheduler": {
+          "nodeId": "scheduler",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "fresh",
+          "degraded": false,
+          "reasons": [
+            "Synthetic exercise signal: unexpected scheduler behavior"
+          ],
+          "paths": [
+            [
+              "scheduler"
+            ]
+          ]
+        }
+      }
+    },
+    "simulation": {
+      "organizationId": "org_pantry_demo",
+      "algorithmVersion": "dependency-v1",
+      "graphRevision": 6,
+      "evaluations": {
+        "backup_roster": {
+          "nodeId": "backup_roster",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "unknown",
+          "degraded": false,
+          "reasons": [
+            "No external evidence or resolved dependency basis"
+          ],
+          "paths": [
+            [
+              "backup_roster"
+            ]
+          ]
+        },
+        "distribution": {
+          "nodeId": "distribution",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "unknown",
+          "degraded": true,
+          "reasons": [
+            "distribution_communications[ALL]: phone_tree=unknown(optional)",
+            "distribution_schedule_source[ANY]: scheduler=unsatisfied, backup_roster=unknown"
+          ],
+          "paths": [
+            [
+              "distribution",
+              "backup_roster"
+            ]
+          ]
+        },
+        "phone_tree": {
+          "nodeId": "phone_tree",
+          "availability": "unknown",
+          "securityTrust": "unknown",
+          "freshness": "unknown",
+          "degraded": false,
+          "reasons": [
+            "No external evidence or resolved dependency basis"
+          ],
+          "paths": [
+            [
+              "phone_tree"
+            ]
+          ]
+        },
+        "scheduler": {
+          "nodeId": "scheduler",
+          "availability": "unsatisfied",
+          "securityTrust": "untrusted",
+          "freshness": "fresh",
+          "degraded": false,
+          "reasons": [
+            "synthetic scheduler stop simulation"
+          ],
+          "paths": [
+            [
+              "scheduler"
+            ]
+          ]
+        }
+      }
+    },
+    "storedProposalId": "proposal_agent_containment",
+    "denials": [
+      {
+        "name": "approve_action",
+        "rejected": true
+      },
+      {
+        "name": "get_incident",
+        "rejected": true
+      },
+      {
+        "name": "submit_response_proposal",
+        "rejected": true
+      },
+      {
+        "name": "get_incident",
+        "rejected": true
+      }
+    ]
+  },
+  "authority": {
+    "approvalMode": "scripted_synthetic_fixture",
+    "unauthorizedApprovalRejected": true,
+    "actionId": "6ccc724b-d504-4da8-830d-2fc51edec162",
+    "approvalId": "2c33c511-3cf4-4834-88bb-75119167a0bf",
+    "execution": {
+      "executionId": "11576131-be09-40a7-8017-4b45911dd63f",
+      "actionId": "6ccc724b-d504-4da8-830d-2fc51edec162",
+      "state": "verified",
+      "mode": "live",
+      "brokerReceipt": {
+        "executionId": "11576131-be09-40a7-8017-4b45911dd63f",
+        "attemptId": "3be18c30-d58c-42b5-9495-ccc063bb0d96",
+        "targetGeneration": "211c7b54-489e-4292-a638-9c86b5186ec7",
+        "status": "effect_applied",
+        "observedAt": "2026-11-07T10:01:56.930Z"
+      },
+      "verification": {
+        "result": "verified",
+        "schedulerReachable": false,
+        "controlReachable": true,
+        "brokerProcessState": "stopped",
+        "observedAt": "2026-11-07T10:01:56.932Z"
+      },
+      "createdAt": "2026-11-07T10:01:56.924Z",
+      "updatedAt": "2026-11-07T10:01:56.932Z"
+    }
+  },
+  "fallback": {
+    "finalIncidentStatus": "running_on_fallback",
+    "artifactDigests": {
+      "task_roster": "3ae472f702ee91e68854524c0a70ede18807265bd3ecf4204fe38b6f7b61784f",
+      "task_checkin": "80f5d5f0ec71e85114518bb2344117b94d48540a48429b2a5837d47a0bccf485"
+    },
+    "tasks": [
+      {
+        "id": "task_checkin",
+        "state": "verified",
+        "evidenceIds": [
+          "evidence_task_checkin_accepted"
+        ]
+      },
+      {
+        "id": "task_roster",
+        "state": "verified",
+        "evidenceIds": [
+          "evidence_task_roster_accepted"
+        ]
+      }
+    ]
+  },
+  "restart": {
+    "incident": {
+      "schemaVersion": 1,
+      "organizationId": "org_pantry_demo",
+      "id": "incident_scheduler_suspicion",
+      "title": "Injected suspicious scheduler observation",
+      "status": "running_on_fallback",
+      "affectedNodeIds": [
+        "scheduler"
+      ],
+      "evidenceIds": [],
+      "commanderActorId": "actor_commander",
+      "revision": 2,
+      "createdAt": "2026-11-07T08:00:00.000Z",
+      "updatedAt": "2026-11-07T10:01:56.937Z"
+    },
+    "tasks": [
+      {
+        "schemaVersion": 1,
+        "organizationId": "org_pantry_demo",
+        "incidentId": "incident_scheduler_suspicion",
+        "id": "task_checkin",
+        "fallbackPlanId": "fallback_backup_roster",
+        "title": "Verify volunteer check-in procedure",
+        "ownerActorId": "actor_volunteer",
+        "prerequisiteTaskIds": [],
+        "acceptanceEvidenceIds": [
+          "evidence_task_checkin_accepted"
+        ],
+        "state": "verified",
+        "revision": 4,
+        "createdAt": "2026-11-07T08:00:00.000Z",
+        "updatedAt": "2026-11-07T10:01:56.936Z"
+      },
+      {
+        "schemaVersion": 1,
+        "organizationId": "org_pantry_demo",
+        "incidentId": "incident_scheduler_suspicion",
+        "id": "task_roster",
+        "fallbackPlanId": "fallback_backup_roster",
+        "title": "Verify sanitized backup roster is available",
+        "ownerActorId": "actor_volunteer",
+        "prerequisiteTaskIds": [],
+        "acceptanceEvidenceIds": [
+          "evidence_task_roster_accepted"
+        ],
+        "state": "verified",
+        "revision": 4,
+        "createdAt": "2026-11-07T08:00:00.000Z",
+        "updatedAt": "2026-11-07T10:01:56.936Z"
+      }
+    ],
+    "proposalCount": 1,
+    "execution": {
+      "executionId": "11576131-be09-40a7-8017-4b45911dd63f",
+      "actionId": "6ccc724b-d504-4da8-830d-2fc51edec162",
+      "state": "verified",
+      "mode": "live",
+      "brokerReceipt": {
+        "executionId": "11576131-be09-40a7-8017-4b45911dd63f",
+        "attemptId": "3be18c30-d58c-42b5-9495-ccc063bb0d96",
+        "targetGeneration": "211c7b54-489e-4292-a638-9c86b5186ec7",
+        "status": "effect_applied",
+        "observedAt": "2026-11-07T10:01:56.930Z"
+      },
+      "verification": {
+        "result": "verified",
+        "schedulerReachable": false,
+        "controlReachable": true,
+        "brokerProcessState": "stopped",
+        "observedAt": "2026-11-07T10:01:56.932Z"
+      },
+      "createdAt": "2026-11-07T10:01:56.924Z",
+      "updatedAt": "2026-11-07T10:01:56.932Z"
+    },
+    "timelineCount": 20
+  },
+  "mesh": {
+    "scope": {
+      "organizationId": "org_pantry_demo",
+      "incidentId": "incident_scheduler_suspicion"
+    },
+    "topology": {
+      "logicalPeers": 3,
+      "processes": "separate child processes",
+      "transport": "length-prefixed JSON over loopback TCP",
+      "adjacency": [
+        "peer-a<->peer-b",
+        "peer-b<->peer-c"
+      ],
+      "directAtoCBlocked": true,
+      "physicalDeviceMeshVerified": false
+    },
+    "crypto": {
+      "sealedBox": "libsodium crypto_box_seal",
+      "senderAuthentication": "Ed25519 signature over canonical full protected envelope",
+      "recipientReceipt": "Ed25519 signed and bound to message/scope/outcome",
+      "relayCannotDecrypt": true
+    },
+    "persistence": {
+      "recipientStoppedBeforeSecondMessage": true,
+      "statusAfterRelayCustody": "in_custody",
+      "relayHadDurableCustody": true,
+      "relayKilledAfterCustody": true,
+      "relayRestartedWithSameStore": true,
+      "recipientRestartedWithSameStore": true
+    },
+    "messages": [
+      {
+        "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+        "status": {
+          "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+          "state": "recipient_acknowledged",
+          "recipientReceipt": {
+            "protocol": "hackutd.mesh.v1",
+            "receiptType": "recipient.receipt",
+            "messageId": "5fb9a460-465c-4039-b1ce-0f318c1a8ab5",
+            "senderId": "peer-a",
+            "organizationId": "org_pantry_demo",
+            "incidentId": "incident_scheduler_suspicion",
+            "recipientId": "peer-c",
+            "envelopeDigest": "a2f5dd1e1cdb6656c5709d8234dce788dbeef03c1623ba9e60b3a9e123448043",
+            "outcome": "accepted",
+            "receivedAt": "2026-11-07T10:01:57.097Z",
+            "signature": "r3Kc2rtyBFCghuHZRNv69kbjbg0tfzQiAGZvEPMqwHR7Go5hiMsvtDNkH4bLMNbRzaEMNxOz9BCNa3w95FrsCg=="
+          }
+        }
+      },
+      {
+        "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+        "status": {
+          "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+          "state": "recipient_acknowledged",
+          "recipientReceipt": {
+            "protocol": "hackutd.mesh.v1",
+            "receiptType": "recipient.receipt",
+            "messageId": "44a68079-9de9-4ad3-8c22-c461277b2752",
+            "senderId": "peer-a",
+            "organizationId": "org_pantry_demo",
+            "incidentId": "incident_scheduler_suspicion",
+            "recipientId": "peer-c",
+            "envelopeDigest": "2135d1ad38a80792cb359b03d71e16916b571d414c44367285c1498ece92dc89",
+            "outcome": "accepted",
+            "receivedAt": "2026-11-07T10:01:57.955Z",
+            "signature": "tKh47KLwWoa2SVi6CRgfHVTNu9gtJZoKUTZ+Q1GMljIYSj+E/rNZm0KMjYOHsHFD0GvWFx/EwoG6rKt5T6hJDw=="
+          }
+        }
+      }
+    ],
+    "recipientInboxCount": 2
+  },
+  "limitations": [
+    "Containment stops one broker-owned disposable local child process; it is not host, network, container, or production isolation.",
+    "Domain and policy use separate SQLite databases; projection is persisted but not a cross-database transaction.",
+    "SQLite and mesh identity files are plaintext synthetic-demo storage.",
+    "Mesh peers are separate processes on one Mac under one OS user; no physical three-device or radio proof.",
+    "All commander, verifier, volunteer, and agent personas in this script are deterministic synthetic demo actors.",
+    "The MCP client is real; the stored proposal in this scripted run is deterministic fixture input, not a claimed external model inference."
+  ]
+}
