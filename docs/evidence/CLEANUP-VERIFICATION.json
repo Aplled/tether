@@ -1,0 +1,156 @@
+{
+  "recordedAt": "2026-11-08T16:02:18.497Z",
+  "scope": "Deletion, presentation cleanup, incident highlighting and in-app popups",
+  "checks": {
+    "command": "./scripts/dev.sh run tether:check",
+    "tests": 94,
+    "pass": 94,
+    "fail": 0,
+    "durationMs": 10951.661041,
+    "typecheck": "passed",
+    "changedJavaScriptSyntax": "passed",
+    "formatting": "passed"
+  },
+  "mainData": {
+    "url": "http://127.0.0.1:4173/",
+    "removedWorkspaces": 4,
+    "removedIncidents": 5,
+    "workspaces": ["Data center operations", "Job requests", "Model training"],
+    "incidents": [
+      {
+        "title": "Customers can restart another customer’s job",
+        "priority": "critical",
+        "nodeIds": ["job-api", "tenant-auth", "retry-route", "training-catalog"]
+      },
+      {
+        "title": "Training jobs are waiting too long",
+        "priority": "medium",
+        "nodeIds": [
+          "training-catalog",
+          "training-dispatch",
+          "queue-priority",
+          "scheduler",
+          "capacity-reporting"
+        ]
+      }
+    ],
+    "tasks": 0,
+    "taskState": "Fresh incidents start empty for live assignment planning",
+    "layout": {
+      "unchanged": true,
+      "nodes": 43,
+      "sha256": "9bd1d5945fe37645b800039d407505033f0f80e64733c97355def25cbb5111f1",
+      "checkedAcrossRestartAndCleanup": true
+    },
+    "backup": "Private ignored SQLite snapshot retained locally"
+  },
+  "browserVerification": {
+    "environment": "Disposable QA at 4192; final main data/highlights at 4173",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "blindReviewer": {
+      "model": "gpt-5.6-sol",
+      "sourceAccess": false,
+      "verified": [
+        "workspace and incident creation",
+        "named deletion confirmations",
+        "both cancel paths",
+        "cancel/reload persistence",
+        "deletion discoverability"
+      ],
+      "limitation": "Stopped before deletion; lead verified deletion separately"
+    },
+    "leadVerified": [
+      "Two QA workspace deletions retained company nodes",
+      "Remote deletion replaces active conversation despite focused draft",
+      "Incident deletion clears remote scope editor and tab",
+      "Deleted incident absent after reload",
+      "New business-importance value persists after reload/Fit",
+      "Engineer assignment popup shows permitted title and navigates correctly",
+      "Marketing popup has general notice only and no private incident link",
+      "Dismissal persists and reload does not replay popup",
+      "New popup preserves focused unsent conversation draft",
+      "Deleted incident removes stale popup and incident tab",
+      "Main app shows exactly two incidents and three workspaces",
+      "Red marks active incident nodes; unaffected critical-importance nodes remain neutral"
+    ],
+    "failuresFoundAndFixed": [
+      "Deleted conversation stayed mounted behind focused input",
+      "Empty responder-sharing request caused false error",
+      "Inspector conflated response restriction with health",
+      "Popup queue retained removed/read notices"
+    ]
+  },
+  "authority": {
+    "incidentDelete": "Current organization admin or incident commander; exact revision",
+    "workspaceDelete": "Current organization admin only",
+    "busy": "Planning, analysis and response must finish before deletion",
+    "preserved": "Company nodes, people, repository mappings, all node positions and independent infrastructure action audit"
+  },
+  "limits": [
+    "In-app only; no OS push, email, SMS or autonomous external pager",
+    "Old unread notices stay in banner without popup replay",
+    "Red means active incident involvement or degraded recorded health, not confirmed root cause",
+    "Fresh incidents have no saved tasks/analysis; off-hours responders opt in per incident",
+    "Training source mapping is metadata, not full runtime",
+    "Local plaintext synthetic data; separate three-process relay is not physical radio mesh"
+  ],
+  "sourceSha256": {
+    "apps/tether/company.ts": "43f9c90d6ef3b0cadfdb187f71c01e23d8d2a60806165d4ac5dacd939478d815",
+    "apps/tether/server.ts": "5f0a79dfade265559642108e219471235881cd22236e9ee2bf6a66114ab16e01",
+    "apps/tether/deletion.test.ts": "5c32bc497f99774ab825f866e0266dbc1cba5ea732c351d4ecee300835d759cc",
+    "apps/tether/public/app.js": "68fbd7817c5f4a6f32a64e9afc0e10ec7a86cca0ff52776122ddecb63792a907",
+    "apps/tether/public/panels.js": "a11696c75547027b6aea3a344dd739a233d369f435c5547c7a08cf4261009f92",
+    "apps/tether/public/styles.css": "0b4f05a75d455b199366a90aea653a7f665488f24d42f1b6df4181a0749b6f2f",
+    "apps/tether/public/canvas.js": "94f8980bba431a758a91025c60a8c4de54aefc17a16440ebf1ad71c3656d0d3b",
+    "apps/tether/public/canvas.css": "2a81bcfc7a87e67b4b1139e827b1aa25a5d582a38a54fd953551d47c513be7cc",
+    "docs/PRESENTATION.md": "49978762f18b61550e1e8e09597ef824e5dfd4a9138b8c5a79b61c6bc558a4a3",
+    "docs/DEVPOST.md": "9044774eda5669629bd23cfa9e8ff3147e02222cdb2102c42fbab843acfa871e"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/deletion/active-incident-highlights.jpg",
+      "sha256": "afea0134ff58f996c8dee61837d9e7b0ae2e436f3250155feae8328c74519e0e",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "docs/evidence/deletion/engineer-popup.jpg",
+      "sha256": "86249e69f5ff2120d506bdfd55b8bb9d1b1c7891f33782405e41f8303c5bd765",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "docs/evidence/deletion/incident-confirmation.jpg",
+      "sha256": "556996212efa59dfa2b20839960e5829c5c1a88975473d51d0f34c3f54177ad9",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "docs/evidence/deletion/marketing-popup.jpg",
+      "sha256": "5a37975c98808d913e73fb9cc7eb9b546acde26482e0a8d49fb31f1656cb3d90",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "docs/evidence/deletion/popup-preserves-draft.jpg",
+      "sha256": "21a0644ac7db6dd21820e7fb4355de6f6f7ea7befa99914babeb880f4af76c22",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "docs/evidence/deletion/two-presentation-incidents.jpg",
+      "sha256": "42b5eae5c6c676a5b8428583b3a77c0aea00aa25b4f2eb4f07a1741b29cd00da",
+      "format": "JPEG",
+      "width": 1280,
+      "height": 720
+    }
+  ]
+}

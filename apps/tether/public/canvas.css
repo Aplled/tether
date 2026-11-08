@@ -239,7 +239,32 @@
 .tether-canvas .node-critical {
   margin-left: auto;
   font-size: 8px;
-  color: #a47b52;
+  font-weight: 700;
+  color: #5f6d7e;
+  background: #eef1f5;
+  border: 1px solid #d7dde5;
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+.tether-canvas .canvas-node.importance-critical {
+  border-color: #cbd3de;
+}
+.tether-canvas .canvas-node.operational-attention {
+  border-color: #d34d5a;
+  background: #fff7f7;
+}
+.tether-canvas .canvas-node.operational-attention h3 {
+  color: #862a33;
+}
+.tether-canvas .node-attention {
+  margin-left: auto;
+  border: 1px solid #efb3ba;
+  border-radius: 999px;
+  padding: 1px 5px;
+  background: #fdebed;
+  color: #a72f3e;
+  font-size: 8px;
+  font-weight: 700;
 }
 .tether-canvas .node-port {
   display: none;

@@ -229,6 +229,17 @@ export async function startTetherServer(
   const imports = new ImportService(() => company.allState());
   const briefs = new Map<string, TaskBrief>();
   const activeAssignmentPlans = new Set<string>();
+  const activeIncidentWork = new Map<string, number>();
+  const beginIncidentWork = (incidentId: string) =>
+    activeIncidentWork.set(
+      incidentId,
+      (activeIncidentWork.get(incidentId) ?? 0) + 1,
+    );
+  const endIncidentWork = (incidentId: string) => {
+    const remaining = (activeIncidentWork.get(incidentId) ?? 1) - 1;
+    if (remaining > 0) activeIncidentWork.set(incidentId, remaining);
+    else activeIncidentWork.delete(incidentId);
+  };
   const responseChecks = new Map<
     string,
     { generation: string; fallback?: unknown; resolution?: unknown }
@@ -1510,6 +1521,39 @@ export async function startTetherServer(
         patch as any,
       );
     }
+    if (type === "incident.delete") {
+      const id = string(payload.id, "id", 100),
+        revision = number(payload.revision, "revision"),
+        incident = company.allState().incidents.find((item) => item.id === id);
+      if (!incident)
+        throw new HttpError(404, "not_found", "incident not found");
+      if (
+        incident.commanderId !== ctx.employeeId &&
+        !company.isOrganizationAdmin(ctx.employeeId)
+      )
+        throw new HttpError(
+          403,
+          "forbidden",
+          "incident deletion requires its commander or an organization admin",
+        );
+      if (
+        activeAssignmentPlans.has(id) ||
+        (activeIncidentWork.get(id) ?? 0) > 0
+      )
+        throw new HttpError(
+          409,
+          "incident_busy",
+          "incident work is still in progress; try deletion again when it finishes",
+        );
+      const deleted = company.deleteIncident(id, revision);
+      for (const [key, value] of analysisByScope)
+        if (value.incidentId === id) analysisByScope.delete(key);
+      for (const [key, brief] of briefs)
+        if (deleted.taskIds.includes(brief.taskId)) briefs.delete(key);
+      responseChecks.delete(id);
+      fallbackVerified.delete(id);
+      return { id, deleted: true };
+    }
     if (type === "incident.acknowledge") {
       const id = string(payload.id, "id", 100);
       allow(ctx, "incident:participate", "incident", id);
@@ -1947,12 +1991,15 @@ export async function startTetherServer(
           ];
         throw new Error("tool not allowed");
       };
-      const mcp = await createCompanyMcpSession({
-        organizationId: "northstar",
-        incidentId,
-        invoke,
-      });
+      beginIncidentWork(incidentId);
+      let mcp: Awaited<ReturnType<typeof createCompanyMcpSession>> | undefined;
       try {
+        mcp = await createCompanyMcpSession({
+          organizationId: "northstar",
+          incidentId,
+          invoke,
+        });
+        const session = mcp;
         const analyzed = await analyzeDemo({
           message:
             typeof payload.message === "string"
@@ -1963,10 +2010,10 @@ export async function startTetherServer(
             incidentId,
             observation: incident.observation,
             semanticRevision: state.organization.semanticRevision,
-            mcpProtocol: mcp.protocolVersion,
+            mcpProtocol: session.protocolVersion,
           },
           callTool: (name, args, options) =>
-            mcp.callTool(name, args, {
+            session.callTool(name, args, {
               ...(options?.signal ? { signal: options.signal } : {}),
               ...(options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
             }),
@@ -2056,13 +2103,17 @@ export async function startTetherServer(
                     "Model conclusions require human review against the evidence.",
                   ],
           },
-          mcp: { protocolVersion: mcp.protocolVersion, tools: mcp.tools },
+          mcp: {
+            protocolVersion: session.protocolVersion,
+            tools: session.tools,
+          },
           ...analyzed,
         };
         analysisByScope.set(scopeKey(live, currentIncident, current), value);
         return value;
       } finally {
-        await mcp.close();
+        endIncidentWork(incidentId);
+        await mcp?.close();
       }
     }
     if (type === "brief.generate") {
@@ -2221,11 +2272,17 @@ export async function startTetherServer(
         approvedDigest: string(payload.digest, "digest", 64),
         expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
       });
-      const execution = await response.executeApproved(
-        actionId,
-        responseTarget,
-        responseObserver,
-      );
+      beginIncidentWork(action.incidentId);
+      let execution: ResponseExecution;
+      try {
+        execution = await response.executeApproved(
+          actionId,
+          responseTarget,
+          responseObserver,
+        );
+      } finally {
+        endIncidentWork(action.incidentId);
+      }
       responseExecutions.set(actionId, execution);
       return execution;
     }
@@ -2249,7 +2306,13 @@ export async function startTetherServer(
           "containment_unverified",
           "containment must be independently verified first",
         );
-      const verified = await responseObserver.verifyFallback();
+      beginIncidentWork(incidentId);
+      let verified: Awaited<ReturnType<typeof responseObserver.verifyFallback>>;
+      try {
+        verified = await responseObserver.verifyFallback();
+      } finally {
+        endIncidentWork(incidentId);
+      }
       responseChecks.set(incidentId, {
         generation: responseTarget.generation,
         fallback: verified,
@@ -2277,14 +2340,21 @@ export async function startTetherServer(
           "resolution_unverified",
           "this incident needs recorded verified containment",
         );
-      const fallback = await responseObserver.verifyFallback();
+      beginIncidentWork(incidentId);
+      let fallback: Awaited<ReturnType<typeof responseObserver.verifyFallback>>,
+        verified: Awaited<ReturnType<typeof responseObserver.verifyResolution>>;
+      try {
+        fallback = await responseObserver.verifyFallback();
+        verified = await responseObserver.verifyResolution();
+      } finally {
+        endIncidentWork(incidentId);
+      }
       if (!fallback.verified)
         throw new HttpError(
           409,
           "resolution_unverified",
           "the safe fallback is not currently verified",
         );
-      const verified = await responseObserver.verifyResolution();
       if (!verified.verified)
         throw new HttpError(
           409,

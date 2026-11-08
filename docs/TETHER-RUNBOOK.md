@@ -27,6 +27,12 @@ Live streams renew every ten seconds and recheck the current account on reconnec
 
 After-hours preferences default off; the synthetic Ava account starts with an explicitly configured accepted on-call window. A manager's title does not require overnight work. The coverage check explains current authorized candidates and why others are ineligible, without promoting anyone. It is a manual, point-in-time eligibility check: there is no background pager, acknowledgment timeout, retry loop, or outbound email/SMS/push delivery. Saved notifications appear only inside the app. A user who voluntarily opens the app can read permitted context and explicitly act within their authority.
 
+New assignments and team notices also appear in a nonblocking in-app popup. Responders can open an incident only when their current projected access includes it; marketing receives the minimal general notice. Popups do not replay old notices on reload, and dismissal is saved. This is not operating-system push or an external pager.
+
+For the current presentation, use [the exact script](PRESENTATION.md): three ordinary workspaces, one critical-priority customer access issue, and one medium-priority training-delay issue. Fresh incidents intentionally start without tasks so **Plan assignments → Assign all** can be shown live. Each off-hours responder must choose **Join response for 1 hour** separately for each incident. Preserve all manually placed nodes; do not use Arrange or reset the catalog. Red outlines indicate visible active incidents or degraded health. Business importance is shown separately with a neutral badge.
+
+Admins can delete an ordinary workspace from its map or conversation; admins and an incident's current commander can delete that incident from its header. Confirmation names the record and explains related data removal. Deletion preserves company nodes and the independent infrastructure action audit. Active analysis or response work must finish first. Other sessions close the removed view and clear its stale tabs, drafts and editors, including after reload.
+
 Imports show the records to add and the existing records to update before confirmation. Reusing a stable ID updates that record. Invalid files keep confirmation disabled; choosing a different file requires another preview. The server checks references again before applying the file. Covered validation errors fail before any rows are written, but the batch is not one crash-atomic database transaction.
 
 ## Model setup

@@ -27,6 +27,12 @@ const esc = (value = "") =>
 const editable = (target) =>
   target?.closest?.('input,textarea,select,[contenteditable="true"]');
 const human = (value = "") => String(value).replace(/[_-]+/g, " ");
+const healthLabel = (value = "unknown") =>
+  value === "healthy"
+    ? "Running normally"
+    : value === "degraded"
+      ? "Degraded"
+      : "Unknown";
 const symbols = {
   service: "◇",
   component: "▣",
@@ -963,7 +969,18 @@ export class TetherCanvas {
       card.classList.toggle("selected", this.selection.has(node.id));
       card.classList.toggle("read-only", !this.canEditNode(node));
       const restricted = node.safetyMode === "unsafe_route_disabled";
+      const criticalSystem = node.criticality === "critical";
+      const activeIncident = Number(node.activeIncidentCount) > 0;
+      const failing = (node.status || node.state) === "degraded";
+      const operationalAttention = activeIncident || failing;
+      const attentionLabel = activeIncident
+        ? "Incident active"
+        : failing
+          ? "Needs attention"
+          : "";
       card.classList.toggle("safety-restricted", restricted);
+      card.classList.toggle("importance-critical", criticalSystem);
+      card.classList.toggle("operational-attention", operationalAttention);
       card.classList.toggle("connect-source", this.connectFrom === node.id);
       card.classList.toggle(
         "evidence-scope",
@@ -980,7 +997,7 @@ export class TetherCanvas {
       card.setAttribute("aria-selected", String(this.selection.has(node.id)));
       card.setAttribute(
         "aria-label",
-        `${node.name}, ${human(node.kind || "service")}${restricted ? `, ${node.safetyLabel || "Unsafe restart blocked"}, ${node.safetyDetail || "Normal jobs not yet verified"}, availability ${node.status || node.state || "unknown"}` : ""}`,
+        `${node.name}, ${human(node.kind || "service")}, health ${healthLabel(node.status || node.state)}${activeIncident ? `, ${node.activeIncidentCount} active ${Number(node.activeIncidentCount) === 1 ? "incident" : "incidents"}` : failing ? ", needs attention because health is degraded" : ""}${criticalSystem ? ", critical business importance" : ""}${restricted ? `, ${node.safetyLabel || "Unsafe restart blocked"}, ${node.safetyDetail || "Normal jobs not yet verified"}` : ""}`,
       );
       const status = node.status || node.state || "unknown",
         owner = node.ownerName || "Unassigned",
@@ -991,6 +1008,7 @@ export class TetherCanvas {
         status,
         owner,
         node.criticality,
+        node.activeIncidentCount,
         node.safetyMode,
         node.safetyLabel,
         node.safetyDetail,
@@ -998,13 +1016,13 @@ export class TetherCanvas {
       ]);
       if (card.dataset.signature !== signature) {
         card.dataset.signature = signature;
-        card.innerHTML = `<div class="node-heading"><span class="node-symbol" aria-hidden="true">${symbols[kind] || "◇"}</span><span class="node-kind">${esc(human(kind))}</span><span class="node-status ${restricted ? "status-restricted" : `status-${esc(status)}`}" title="${esc(restricted ? "The unsafe restart route is disabled. Service availability is shown separately." : status)}"><i></i>${esc(restricted ? node.safetyLabel || "Unsafe restart blocked" : human(status))}</span></div><h3 title="${esc(node.name)}">${esc(node.name)}</h3>${restricted ? `<p class="node-safety-detail">${esc(node.safetyDetail || "Normal jobs not yet verified")}</p>` : ""}<footer><span class="avatar">${esc(
+        card.innerHTML = `<div class="node-heading"><span class="node-symbol" aria-hidden="true">${symbols[kind] || "◇"}</span><span class="node-kind">${esc(human(kind))}</span><span class="node-status ${restricted ? "status-restricted" : `status-${esc(status)}`}" title="${esc(restricted ? `The unsafe restart route is disabled. Current health: ${healthLabel(status)}.` : `Current health: ${healthLabel(status)}.`)}"><i></i>${esc(restricted ? node.safetyLabel || "Unsafe restart blocked" : healthLabel(status))}</span></div><h3 title="${esc(node.name)}">${esc(node.name)}</h3>${restricted ? `<p class="node-safety-detail">${esc(node.safetyDetail || "Normal jobs not yet verified")}</p>` : ""}<footer><span class="avatar">${esc(
           owner
             .split(" ")
             .map((part) => part[0])
             .join("")
             .slice(0, 2),
-        )}</span><span class="node-owner" title="${esc(owner)}">${esc(owner)}</span>${restricted ? `<span class="node-availability" title="Canonical service availability: ${esc(status)}">Availability: ${esc(human(status))}</span>` : node.criticality === "critical" ? '<span class="node-critical">Critical</span>' : ""}</footer>${!this.canEditNode(node) ? "" : `<button class="node-port out" title="Connect from ${esc(node.name)}" aria-label="Connect from ${esc(node.name)}">+</button>`}`;
+        )}</span><span class="node-owner" title="${esc(owner)}">${esc(owner)}</span>${restricted ? `<span class="node-availability" title="Current health: ${esc(healthLabel(status))}">Health: ${esc(healthLabel(status))}</span>` : ""}${operationalAttention ? `<span class="node-attention" title="${esc(activeIncident ? `${node.activeIncidentCount} visible active ${Number(node.activeIncidentCount) === 1 ? "incident includes" : "incidents include"} this system.` : "Current health is degraded.")}">${attentionLabel}</span>` : ""}${criticalSystem ? '<span class="node-critical" title="Critical business importance.">Critical system</span>' : ""}</footer>${!this.canEditNode(node) ? "" : `<button class="node-port out" title="Connect from ${esc(node.name)}" aria-label="Connect from ${esc(node.name)}">+</button>`}`;
       }
     }
     for (const element of mounted.values()) element.remove();

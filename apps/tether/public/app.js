@@ -53,6 +53,8 @@ const state = {
   assignmentRequests: {},
   sidebar: false,
   replay: null,
+  removedNavigationPending: false,
+  notificationQueue: [],
 };
 let canvas, disconnect, canvasTabId, replayTimer;
 const importPreviews = new WeakMap();
@@ -72,6 +74,7 @@ const staleSessionError = () =>
 // Accept current state once; a delayed stream record must not roll it backward.
 function acceptSnapshot(next) {
   const data = next?.data || next?.state || next;
+  const previous = state.data;
   const session = auth.get();
   if (
     !data ||
@@ -89,6 +92,8 @@ function acceptSnapshot(next) {
   if (signature === snapshotSignature) return false;
   state.data = data;
   snapshotSignature = signature;
+  captureNotificationPopups(previous, data);
+  reconcileRemovedItems(previous, data);
   if (
     state.replay &&
     !state.data.analysisByIncident?.[state.replay.incidentId]
@@ -99,6 +104,128 @@ function acceptSnapshot(next) {
     );
   }
   return true;
+}
+function popupSeenKey(userId = state.data?.user?.id) {
+  return `tether.${userId || "guest"}.notification-popups`;
+}
+function popupSeenIds(userId) {
+  try {
+    return new Set(
+      JSON.parse(sessionStorage.getItem(popupSeenKey(userId))) || [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+function captureNotificationPopups(previous, next) {
+  const eligible = (next.notifications || []).filter(
+    (notice) =>
+      !notice.read &&
+      ["assignment", "escalation", "minimal_notice"].includes(notice.kind),
+  );
+  const currentEligible = new Map(
+    eligible.map((notice) => [notice.id, notice]),
+  );
+  state.notificationQueue = state.notificationQueue
+    .filter((notice) => currentEligible.has(notice.id))
+    .map((notice) => currentEligible.get(notice.id));
+  const seen = popupSeenIds(next.user?.id);
+  if (!previous) {
+    // The banner keeps existing unread notices available. Popups begin with
+    // notices created after this signed-in view loads, avoiding stale replay.
+    for (const notice of next.notifications || []) seen.add(notice.id);
+    sessionStorage.setItem(
+      popupSeenKey(next.user?.id),
+      JSON.stringify([...seen]),
+    );
+    return;
+  }
+  const previousIds = new Set(
+    (previous.notifications || []).map((notice) => notice.id),
+  );
+  const queuedIds = new Set(state.notificationQueue.map((notice) => notice.id));
+  const added = eligible
+    .filter(
+      (notice) =>
+        !previousIds.has(notice.id) &&
+        !seen.has(notice.id) &&
+        !queuedIds.has(notice.id),
+    )
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  if (!added.length) return;
+  state.notificationQueue.push(...added);
+  for (const notice of added) seen.add(notice.id);
+  sessionStorage.setItem(
+    popupSeenKey(next.user?.id),
+    JSON.stringify([...seen].slice(-500)),
+  );
+}
+function reconcileRemovedItems(previous, next) {
+  if (!previous) return;
+  const nextIncidentIds = new Set((next.incidents || []).map((i) => i.id));
+  const nextWorkspaceIds = new Set((next.workspaces || []).map((w) => w.id));
+  const removedIncidents = (previous.incidents || [])
+    .filter((i) => !nextIncidentIds.has(i.id))
+    .map((i) => i.id);
+  const removedWorkspaces = (previous.workspaces || [])
+    .filter((w) => !nextWorkspaceIds.has(w.id))
+    .map((w) => w.id);
+  if (!removedIncidents.length && !removedWorkspaces.length) return;
+
+  const removedTabs = new Set([
+    ...removedIncidents.map((id) => `incident:${id}`),
+    ...removedWorkspaces.map((id) => `workspace:${id}`),
+  ]);
+  const activeIndex = state.tabs.findIndex((tab) => tab.id === state.active);
+  const activeRemoved = removedTabs.has(state.active);
+  state.tabs = state.tabs.filter((tab) => !removedTabs.has(tab.id));
+  if (!state.tabs.length)
+    state.tabs = [{ id: "map", kind: "map", name: "System map" }];
+  if (activeRemoved)
+    state.active =
+      state.tabs[Math.min(Math.max(activeIndex - 1, 0), state.tabs.length - 1)]
+        ?.id || "map";
+  if (activeRemoved) {
+    state.removedNavigationPending = true;
+    state.selected = [];
+    state.sheet = null;
+    closeOverlay();
+  }
+
+  removedTabs.forEach((id) => delete state.viewport[id]);
+  for (const id of removedIncidents) {
+    delete state.drafts[`incident:${id}`];
+    delete state.results[id];
+    delete state.assignmentRequests[id];
+    delete state.coverage[id];
+  }
+  for (const id of removedWorkspaces) delete state.drafts[`workspace:${id}`];
+  if (removedIncidents.includes(state.focus)) {
+    state.focus = null;
+    canvas?.setFocus(null);
+  }
+  if (removedIncidents.includes(state.replay?.incidentId)) stopReplay();
+  state.notificationQueue = state.notificationQueue.filter(
+    (notice) => !removedIncidents.includes(notice.incidentId),
+  );
+  if (
+    removedIncidents.some((id) => state.sheet === `incident:${id}`) ||
+    removedWorkspaces.some((id) => state.sheet === `workspace:${id}`)
+  )
+    closeOverlay();
+  const confirmation = document.querySelector(
+    "#overlay [data-confirm-delete-kind]",
+  );
+  if (
+    confirmation &&
+    ((confirmation.dataset.confirmDeleteKind === "incident" &&
+      removedIncidents.includes(confirmation.dataset.confirmDeleteId)) ||
+      (confirmation.dataset.confirmDeleteKind === "workspace" &&
+        removedWorkspaces.includes(confirmation.dataset.confirmDeleteId)))
+  )
+    closeOverlay();
+  sessionStorage.setItem(sessionKey("drafts"), JSON.stringify(state.drafts));
+  persistTabs();
 }
 function scheduleLiveRefresh() {
   clearTimeout(liveRefreshTimer);
@@ -185,6 +312,10 @@ const currentWorkspace = () =>
   items("workspaces").find((w) => w.id === currentTab().targetId);
 const commander = (i) =>
   i?.commanderId === state.data.user.id || can("incident:assign");
+const canDeleteIncident = (i) =>
+  Boolean(
+    i && (can("organization:admin") || i.commanderId === state.data?.user?.id),
+  );
 function safetyOverlay(nodeId) {
   const result = Object.values(state.data?.responseByIncident || {}).find(
     (r) =>
@@ -215,6 +346,10 @@ function scopeExplanation(i) {
 }
 const enrichNode = (n) => ({
   ...n,
+  activeIncidentCount: items("incidents").filter(
+    (incident) =>
+      incident.status !== "resolved" && incident.nodeIds?.includes(n.id),
+  ).length,
   ownerName: items("members").find((m) => m.id === n.ownerId)?.name,
   department: items("departments").find(
     (d) =>
@@ -261,6 +396,31 @@ function restoreTabs() {
     state.drafts =
       JSON.parse(sessionStorage.getItem(sessionKey("drafts"))) || {};
   } catch {}
+  pruneRestoredItems();
+}
+function pruneRestoredItems() {
+  const incidentIds = new Set(items("incidents").map((i) => i.id));
+  const workspaceIds = new Set(items("workspaces").map((w) => w.id));
+  const valid = (tab) =>
+    tab.kind === "incident"
+      ? incidentIds.has(tab.targetId)
+      : tab.kind === "workspace"
+        ? workspaceIds.has(tab.targetId)
+        : true;
+  state.tabs = state.tabs.filter(valid);
+  if (!state.tabs.some((tab) => tab.id === "map"))
+    state.tabs.unshift({ id: "map", kind: "map", name: "System map" });
+  if (!state.tabs.some((tab) => tab.id === state.active)) state.active = "map";
+  for (const key of Object.keys(state.drafts)) {
+    const [kind, id] = key.split(":");
+    if (
+      (kind === "incident" && !incidentIds.has(id)) ||
+      (kind === "workspace" && !workspaceIds.has(id))
+    )
+      delete state.drafts[key];
+  }
+  sessionStorage.setItem(sessionKey("drafts"), JSON.stringify(state.drafts));
+  persistTabs();
 }
 function storeDraft(key, value) {
   state.drafts[key] = value;
@@ -351,6 +511,8 @@ function resetSessionState() {
     results: {},
     assignmentRequests: {},
     sidebar: false,
+    removedNavigationPending: false,
+    notificationQueue: [],
   });
   toastEl.textContent = "";
   toastEl.className = "";
@@ -430,6 +592,11 @@ function refreshLive() {
   clearTimeout(liveRefreshTimer);
   if (!auth.get() || !liveRefreshPending || pointerActive || pendingActions)
     return;
+  if (state.removedNavigationPending) {
+    state.removedNavigationPending = false;
+    render();
+    return;
+  }
   const deferredChrome = refreshChrome();
   const deferredFocus = refreshFocusSummary();
   if (state.sheet) return;
@@ -468,6 +635,28 @@ function noticeMarkup() {
   if (!notice) return "";
   return `<div class="notice-bar" role="status"><span>${h(notice.message || notice.text)}</span><div class="notice-actions">${notices.length > 1 ? `<small>${notices.length} unread</small>` : ""}<button data-read-notice="${h(notice.id)}" aria-label="${notices.length > 1 ? "Dismiss notice and show next" : "Dismiss notice"}">${notices.length > 1 ? "Dismiss · Next" : "×"}</button></div></div>`;
 }
+function notificationPopupMarkup() {
+  const notice = state.notificationQueue[0];
+  if (!notice) return "";
+  const incident = items("incidents").find(
+    (item) => item.id === notice.incidentId,
+  );
+  const title =
+    notice.kind === "assignment"
+      ? "New assignment"
+      : notice.kind === "escalation"
+        ? "Response escalation"
+        : "Team notice";
+  const detail =
+    notice.kind === "minimal_notice"
+      ? notice.text
+      : incident
+        ? notice.text
+        : notice.kind === "assignment"
+          ? "A new investigation task is available."
+          : "A response needs your attention.";
+  return `<aside class="notification-popup" role="status" aria-live="polite" aria-label="${h(title)}"><span class="eyebrow">${h(title)}</span><h2>${h(incident?.title || title)}</h2><p>${h(detail)}</p><div class="button-row">${incident ? `<button class="primary" data-popup-open-incident="${h(incident.id)}" data-notification-id="${h(notice.id)}">Open incident</button>` : ""}<button data-popup-dismiss="${h(notice.id)}">Dismiss</button></div></aside>`;
+}
 function refreshChrome() {
   // Update only live shell regions, retaining the canvas, editor, menus and draft.
   let deferred = false;
@@ -475,6 +664,7 @@ function refreshChrome() {
   template.innerHTML = shell("");
   for (const selector of [
     "#notice-region",
+    "#notification-popup-region",
     ".nav-count",
     "#workspace-list",
     "#incident-list",
@@ -524,7 +714,7 @@ function shell(main) {
       )
       .join("") ||
     `<p class="sidebar-empty">${can("organization:admin") ? "No incidents" : "No incidents shared with you"}</p>`
-  }</div>${can("incident:create") ? '<button class="sidebar-create orange-text" data-create-incident>+ Create incident</button>' : ""}</section><footer class="sidebar-footer">${can("organization:admin") ? `<button data-nav="setup">${icon("settings")}<span>Company setup</span></button>` : ""}<button data-nav="settings"><span class="avatar">${h(initials(u.name))}</span><span><b>${h(u.name)}</b><small>My preferences</small></span></button></footer></aside><button class="sidebar-scrim" data-toggle-sidebar aria-label="Close navigation"></button><section class="main-shell"><header class="topbar"><div class="topbar-left"><button class="icon-button menu-toggle" data-toggle-sidebar aria-label="Open navigation">${icon("menu")}</button><span>${h(t.kind === "incident" ? "Incident response" : t.kind === "workspace" ? "Workspace" : t.kind === "map" ? "Company graph" : tabName(t))}</span></div><div class="topbar-actions"><span class="live-pill"><i></i><span id="stream-state">${state.stream === "live" ? "Live" : h(human(state.stream))}</span></span>${can("incident:create") ? '<button class="top-create" data-create-incident>+ Create incident</button>' : ""}</div></header><div class="tab-strip" role="tablist">${state.tabs.map((tab) => `<div class="workspace-tab ${tab.id === state.active ? "active" : ""}" role="presentation"><button role="tab" aria-selected="${tab.id === state.active}" data-tab="${h(tab.id)}" title="${h(tabName(tab))}">${icon(tab.kind === "incident" ? "incident" : tab.kind === "chat" ? "message" : tab.kind === "people" ? "people" : "canvas")}<span>${h(tabName(tab))}</span></button>${tab.id !== "map" ? `<button class="tab-close" aria-label="Close ${h(tabName(tab))}" data-close-tab="${h(tab.id)}">×</button>` : ""}</div>`).join("")}</div><div id="notice-region">${noticeMarkup()}</div><div id="view-host">${main}</div></section><div id="overlay"></div><div id="context-menu" hidden></div></div>`;
+  }</div>${can("incident:create") ? '<button class="sidebar-create orange-text" data-create-incident>+ Create incident</button>' : ""}</section><footer class="sidebar-footer">${can("organization:admin") ? `<button data-nav="setup">${icon("settings")}<span>Company setup</span></button>` : ""}<button data-nav="settings"><span class="avatar">${h(initials(u.name))}</span><span><b>${h(u.name)}</b><small>My preferences</small></span></button></footer></aside><button class="sidebar-scrim" data-toggle-sidebar aria-label="Close navigation"></button><section class="main-shell"><header class="topbar"><div class="topbar-left"><button class="icon-button menu-toggle" data-toggle-sidebar aria-label="Open navigation">${icon("menu")}</button><span>${h(t.kind === "incident" ? "Incident response" : t.kind === "workspace" ? "Workspace" : t.kind === "map" ? "Company graph" : tabName(t))}</span></div><div class="topbar-actions"><span class="live-pill"><i></i><span id="stream-state">${state.stream === "live" ? "Live" : h(human(state.stream))}</span></span>${can("incident:create") ? '<button class="top-create" data-create-incident>+ Create incident</button>' : ""}</div></header><div class="tab-strip" role="tablist">${state.tabs.map((tab) => `<div class="workspace-tab ${tab.id === state.active ? "active" : ""}" role="presentation"><button role="tab" aria-selected="${tab.id === state.active}" data-tab="${h(tab.id)}" title="${h(tabName(tab))}">${icon(tab.kind === "incident" ? "incident" : tab.kind === "chat" ? "message" : tab.kind === "people" ? "people" : "canvas")}<span>${h(tabName(tab))}</span></button>${tab.id !== "map" ? `<button class="tab-close" aria-label="Close ${h(tabName(tab))}" data-close-tab="${h(tab.id)}">×</button>` : ""}</div>`).join("")}</div><div id="notice-region">${noticeMarkup()}</div><div id="view-host">${main}</div></section><div id="notification-popup-region">${notificationPopupMarkup()}</div><div id="overlay"></div><div id="context-menu" hidden></div></div>`;
 }
 function replayMarkup() {
   const r = state.replay;
@@ -614,7 +804,7 @@ function refreshFocusSummary() {
 }
 function mapView() {
   const w = currentTab().kind === "workspace" ? currentWorkspace() : null;
-  return `<main class="canvas-page"><div class="canvas-toolbar"><div class="canvas-title"><h1>${h(w?.name || "System map")}</h1><span>${w ? `${w.nodeIds.length} ${w.nodeIds.length === 1 ? "node" : "nodes"}` : `${items("nodes").length} ${items("nodes").length === 1 ? "node" : "nodes"} · ${items("edges").length} ${items("edges").length === 1 ? "connection" : "connections"}`}</span></div><div class="toolbar-actions">${picker("View", "mapWorkspace", [{ id: "all", name: "All systems" }, ...items("workspaces")], w?.id || "all", false)}<button data-fit title="Fit visible nodes">${icon("fit")}<span>Fit</span></button>${can("graph:write") ? `${can("organization:admin") ? '<button data-organize title="Organize nodes">Arrange</button>' : ""}<button class="primary" data-add-node>${icon("plus")}<span>Add node</span></button>` : ""}</div></div>${w ? `<div class="view-tabs"><button class="active" data-workspace-tab="map">Map</button><button data-workspace-tab="chat">Conversation</button>${can("organization:admin") ? `<button data-edit-workspace="${h(w.id)}">Edit workspace</button>` : ""}</div>` : ""}<div id="focus-summary">${focusSummaryMarkup()}</div><div id="replay-panel">${replayMarkup()}</div><div class="canvas-stage"><section id="canvas" aria-label="System map"></section><div id="selection-toolbar" hidden></div><div class="canvas-controls"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-fit aria-label="Fit canvas">${icon("fit")}</button><button data-zoom="1" aria-label="Zoom in">+</button><output id="canvas-zoom" aria-label="Canvas zoom">100%</output><label class="check"><input id="edge-labels" type="checkbox" ${state.labels ? "checked" : ""}>Edge labels</label></div><div class="gesture-hint">Scroll to pan · Shift + scroll to zoom · Drag to select</div></div></main>`;
+  return `<main class="canvas-page"><div class="canvas-toolbar"><div class="canvas-title"><h1>${h(w?.name || "System map")}</h1><span>${w ? `${w.nodeIds.length} ${w.nodeIds.length === 1 ? "node" : "nodes"}` : `${items("nodes").length} ${items("nodes").length === 1 ? "node" : "nodes"} · ${items("edges").length} ${items("edges").length === 1 ? "connection" : "connections"}`}</span></div><div class="toolbar-actions">${picker("View", "mapWorkspace", [{ id: "all", name: "All systems" }, ...items("workspaces")], w?.id || "all", false)}<button data-fit title="Fit visible nodes">${icon("fit")}<span>Fit</span></button>${can("graph:write") ? `${can("organization:admin") ? '<button data-organize title="Organize nodes">Arrange</button>' : ""}<button class="primary" data-add-node>${icon("plus")}<span>Add node</span></button>` : ""}</div></div>${w ? `<div class="view-tabs"><button class="active" data-workspace-tab="map">Map</button><button data-workspace-tab="chat">Conversation</button>${can("organization:admin") ? `<button data-edit-workspace="${h(w.id)}">Edit workspace</button><button class="danger-text view-delete" data-delete-workspace="${h(w.id)}">Delete workspace</button>` : ""}</div>` : ""}<div id="focus-summary">${focusSummaryMarkup()}</div><div id="replay-panel">${replayMarkup()}</div><div class="canvas-stage"><section id="canvas" aria-label="System map"></section><div id="selection-toolbar" hidden></div><div class="canvas-controls"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-fit aria-label="Fit canvas">${icon("fit")}</button><button data-zoom="1" aria-label="Zoom in">+</button><output id="canvas-zoom" aria-label="Canvas zoom">100%</output><label class="check"><input id="edge-labels" type="checkbox" ${state.labels ? "checked" : ""}>Edge labels</label></div><div class="gesture-hint">Scroll to pan · Shift + scroll to zoom · Drag to select</div></div></main>`;
 }
 function incidentsView() {
   return `<main class="page"><header class="page-header"><div><span class="eyebrow">Response</span><h1>${incidentListTitle()} <span class="count">${items("incidents").length}</span></h1></div>${can("incident:create") ? '<button class="primary" data-create-incident>Create incident</button>' : ""}</header><div class="incident-grid">${
@@ -639,7 +829,7 @@ function incidentView() {
     tasks = items("tasks").filter((t) => t.incidentId === i.id),
     p = state.data.proposalsByIncident?.[i.id],
     a = state.data.analysisByIncident?.[i.id];
-  return `<main class="incident-page"><header class="incident-header"><button class="back-button" data-nav="incidents">← ${can("organization:admin") ? "All incidents" : "Your incidents"}</button><div class="page-header"><div><div class="button-row"><span class="pill priority-${h(i.priority || i.severity || "high")}">${h(human(i.priority || i.severity || "high"))} priority</span><span class="pill">${h(human(i.status))}</span></div><h1>${h(i.title)}</h1><p>${i.memberIds?.length || 0} responders · ${i.nodeIds?.length || 0} visible systems${restrictedCount(i) ? ` · ${restrictedCount(i)} not shared` : ""}</p></div>${i.nodeIds?.length ? `<button data-focus-incident="${h(i.id)}">${icon("canvas")} View on map</button>` : ""}</div></header><nav class="view-tabs" aria-label="Incident sections">${[
+  return `<main class="incident-page"><header class="incident-header"><button class="back-button" data-nav="incidents">← ${can("organization:admin") ? "All incidents" : "Your incidents"}</button><div class="page-header"><div><div class="button-row"><span class="pill priority-${h(i.priority || i.severity || "high")}">${h(human(i.priority || i.severity || "high"))} priority</span><span class="pill">${h(human(i.status))}</span></div><h1>${h(i.title)}</h1><p>${i.memberIds?.length || 0} responders · ${i.nodeIds?.length || 0} visible systems${restrictedCount(i) ? ` · ${restrictedCount(i)} not shared` : ""}</p></div><div class="record-actions">${i.nodeIds?.length ? `<button data-focus-incident="${h(i.id)}">${icon("canvas")} View on map</button>` : ""}${canDeleteIncident(i) ? `<button class="danger-soft" data-delete-incident="${h(i.id)}">Delete incident</button>` : ""}</div></div></header><nav class="view-tabs" aria-label="Incident sections">${[
     ["overview", "Overview"],
     ["tasks", `Tasks (${tasks.length})`],
     ["chat", "Conversation"],
@@ -849,7 +1039,7 @@ function chatView(scope, id) {
         ? items("workspaces").find((w) => w.id === id)
         : null,
     key = `${scope}:${id || "company"}`;
-  return `<section class="conversation ${isIncident ? "incident-conversation" : ""}">${!isIncident ? `<header class="conversation-header">${w ? '<button class="back-button" data-workspace-tab="map">← Workspace map</button>' : ""}<span class="eyebrow">${w ? "Workspace conversation" : "Company channel"}</span><h1>${h(w?.name || "Conversation")}</h1><p>${w ? "Updates shared with workspace members." : "Everyday updates for your company."}</p></header>` : ""}<div class="message-list" data-chat-list data-scope="${scope}" data-target="${h(id || "")}"></div><form id="message-form" class="message-composer" data-scope="${scope}" data-target="${h(id || "")}" data-draft-key="${h(key)}"><label class="sr-only" for="message-text">Message</label><textarea id="message-text" name="text" required maxlength="4000" placeholder="Write a message…">${h(state.drafts[key] || "")}</textarea><div class="composer-footer"><small>Messages stay within this ${isIncident ? "incident" : w ? "workspace" : "company"}.</small><button class="primary" type="submit">Send message ${icon("message")}</button></div><p class="form-error"></p></form></section>`;
+  return `<section class="conversation ${isIncident ? "incident-conversation" : ""}">${!isIncident ? `<header class="conversation-header">${w ? '<button class="back-button" data-workspace-tab="map">← Workspace map</button>' : ""}<span class="eyebrow">${w ? "Workspace conversation" : "Company channel"}</span><div class="conversation-title-row"><div><h1>${h(w?.name || "Conversation")}</h1><p>${w ? "Updates shared with workspace members." : "Everyday updates for your company."}</p></div>${w && can("organization:admin") ? `<button class="danger-soft" data-delete-workspace="${h(w.id)}">Delete workspace</button>` : ""}</div></header>` : ""}<div class="message-list" data-chat-list data-scope="${scope}" data-target="${h(id || "")}"></div><form id="message-form" class="message-composer" data-scope="${scope}" data-target="${h(id || "")}" data-draft-key="${h(key)}"><label class="sr-only" for="message-text">Message</label><textarea id="message-text" name="text" required maxlength="4000" placeholder="Write a message…">${h(state.drafts[key] || "")}</textarea><div class="composer-footer"><small>Messages stay within this ${isIncident ? "incident" : w ? "workspace" : "company"}.</small><button class="primary" type="submit">Send message ${icon("message")}</button></div><p class="form-error"></p></form></section>`;
 }
 function refreshMessages() {
   const el = document.querySelector("[data-chat-list]");
@@ -1061,7 +1251,10 @@ function newIncident(ids = []) {
   );
 }
 function editWorkspace(w = {}, ids = []) {
-  showOverlay(workspaceForm(state.data, w, ids));
+  showOverlay(
+    workspaceForm(state.data, w, ids),
+    w.id ? `workspace:${w.id}` : "form",
+  );
 }
 function editNode(n = {}) {
   if (!n.id && !can("organization:admin"))
@@ -1137,6 +1330,7 @@ function editIncidentScope() {
       )}${can("organization:admin") ? '<label class="check share-consent"><input type="checkbox" name="shareSystems" checked><span><b>Share selected systems with responders</b><small>Add read-only access for this incident. Existing permissions stay unchanged.</small></span></label>' : ""}`,
       { id: "incident-scope-form", subtitle: i.title, submit: "Save scope" },
     ),
+    `incident:${i.id}`,
   );
 }
 function repositoryForm(r = {}) {
@@ -1331,6 +1525,51 @@ async function deleteNodes(ids) {
     }
   };
 }
+function confirmRecordDeletion(kind, item) {
+  if (!item) return;
+  const isIncident = kind === "incident";
+  const label = isIncident ? "incident" : "workspace";
+  const details = isIncident
+    ? "Its tasks, conversation, notices, and saved assignment plans and prompts will also be removed. Company map nodes remain available."
+    : "Its conversation and saved view will also be removed. Company map nodes remain available.";
+  showOverlay(
+    sheet(
+      `Delete ${label}?`,
+      `<div class="delete-confirmation" data-confirm-delete-kind="${label}" data-confirm-delete-id="${h(item.id)}"><p>You’re deleting <strong>${h(isIncident ? item.title : item.name)}</strong>.</p><p>${details}</p><p class="form-error" role="alert"></p><div class="button-row"><button data-close>Cancel</button><button class="danger-button" data-confirm-record-delete>Delete ${label}</button></div></div>`,
+      { subtitle: "This cannot be undone" },
+    ),
+    `${label}:${item.id}`,
+  );
+  const confirmation = document.querySelector("[data-confirm-delete-kind]"),
+    button = confirmation.querySelector("[data-confirm-record-delete]"),
+    errorBox = confirmation.querySelector(".form-error");
+  button.onclick = async () => {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Deleting…";
+    errorBox.textContent = "";
+    try {
+      await mutate(
+        `${label}.delete`,
+        { id: item.id, revision: item.revision },
+        { render: false },
+      );
+      closeOverlay();
+      render();
+      toast(`${isIncident ? "Incident" : "Workspace"} deleted`);
+    } catch (error) {
+      if (error.staleSession || !button.isConnected) return;
+      errorBox.textContent =
+        error.status === 409
+          ? human(error.message || `${label} changed; reopen it and try again.`)
+          : explainError(error);
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = `Delete ${label}`;
+    }
+  };
+}
 async function deleteEdge(id) {
   const e = items("edges").find((x) => x.id === id);
   await mutate("edge.delete", { id, revision: e?.revision }, { render: false });
@@ -1425,6 +1664,7 @@ async function submitForm(f) {
         name: v.name,
         description: v.description,
         kind: v.kind || "service",
+        criticality: v.criticality || "medium",
         ownerId: v.ownerId || null,
         regionId: v.regionId || null,
       };
@@ -1436,7 +1676,6 @@ async function submitForm(f) {
         : {
             ...patch,
             ownerId: v.ownerId || undefined,
-            criticality: "medium",
             x: 220,
             y: 180,
           },
@@ -1498,8 +1737,9 @@ async function submitForm(f) {
     render();
     toast("Profile saved");
   } else if (f.getAttribute("id") === "incident-form") {
-    const nodeIds = chosen(f, "nodeIds");
-    if (chosen(f, "memberIds").length > 30)
+    const nodeIds = chosen(f, "nodeIds"),
+      memberIds = chosen(f, "memberIds");
+    if (memberIds.length > 30)
       throw Error("Choose up to 30 responders for one incident.");
     if (nodeIds.length > 50) throw Error("Choose up to 50 affected nodes.");
     if (!nodeIds.length) throw Error("Choose at least one affected node.");
@@ -1510,7 +1750,7 @@ async function submitForm(f) {
         observation: v.observation,
         regionId: v.regionId || "global",
         nodeIds,
-        memberIds: chosen(f, "memberIds"),
+        memberIds,
         priority: v.severity || "high",
       },
       { render: false, idempotent: true },
@@ -1518,11 +1758,11 @@ async function submitForm(f) {
     const id =
       r.result?.id || r.result?.incident?.id || items("incidents").at(-1)?.id;
     let shareError = null;
-    if (id && v.shareSystems && can("organization:admin")) {
+    if (id && memberIds.length && v.shareSystems && can("organization:admin")) {
       try {
         await mutate(
           "incident.share_systems",
-          { incidentId: id, memberIds: chosen(f, "memberIds"), nodeIds },
+          { incidentId: id, memberIds, nodeIds },
           { render: false },
         );
       } catch (error) {
@@ -1536,7 +1776,7 @@ async function submitForm(f) {
     toast(
       shareError
         ? "Incident created. System sharing could not be saved; edit the incident scope to retry."
-        : v.shareSystems
+        : v.shareSystems && memberIds.length
           ? "Incident created and selected systems shared"
           : "Incident created",
       Boolean(shareError),
@@ -2036,35 +2276,17 @@ app.addEventListener("click", async (e) => {
     else if (d.editWorkspace)
       editWorkspace(items("workspaces").find((w) => w.id === d.editWorkspace));
     else if (d.openWorkspace) openWorkspace(d.openWorkspace);
-    else if (d.deleteWorkspace) {
-      const w = items("workspaces").find((w) => w.id === d.deleteWorkspace);
-      showOverlay(
-        sheet(
-          "Delete workspace?",
-          `<p>Remove ${h(w.name)} from the workspace list? The company nodes remain available on the system map.</p><div class="button-row"><button data-close>Cancel</button><button class="danger-button" id="delete-workspace-confirm">Delete workspace</button></div>`,
-        ),
+    else if (d.deleteWorkspace)
+      confirmRecordDeletion(
+        "workspace",
+        items("workspaces").find((w) => w.id === d.deleteWorkspace),
       );
-      document.querySelector("#delete-workspace-confirm").onclick = async (
-        e,
-      ) => {
-        e.currentTarget.disabled = true;
-        try {
-          await mutate(
-            "workspace.delete",
-            { id: w.id, revision: w.revision },
-            { render: false },
-          );
-          state.tabs = state.tabs.filter((t) => t.targetId !== w.id);
-          state.active = "map";
-          persistTabs();
-          closeOverlay();
-          render();
-          toast("Workspace deleted");
-        } catch (error) {
-          toast(explainError(error), true);
-        }
-      };
-    } else if (d.personActive) {
+    else if (d.deleteIncident)
+      confirmRecordDeletion(
+        "incident",
+        items("incidents").find((i) => i.id === d.deleteIncident),
+      );
+    else if (d.personActive) {
       const p = items("members").find((m) => m.id === d.personActive);
       if (p.id === state.data.user.id)
         throw Error("Ask another administrator to change your account status.");
@@ -2243,12 +2465,29 @@ app.addEventListener("click", async (e) => {
     } else if (d.resolve) {
       b.disabled = true;
       await runResponse("resolve", d.resolve);
+    } else if (d.popupDismiss) {
+      b.disabled = true;
+      await action("notification.read", { id: d.popupDismiss });
+      state.notificationQueue = state.notificationQueue.filter(
+        (notice) => notice.id !== d.popupDismiss,
+      );
+      refreshChrome();
+    } else if (d.popupOpenIncident) {
+      b.disabled = true;
+      await action("notification.read", { id: d.notificationId });
+      state.notificationQueue = state.notificationQueue.filter(
+        (notice) => notice.id !== d.notificationId,
+      );
+      openIncident(d.popupOpenIncident);
     } else if (d.readNotice) {
       b.disabled = true;
       await mutate(
         "notification.read",
         { id: d.readNotice },
         { message: "Notice dismissed", render: false },
+      );
+      state.notificationQueue = state.notificationQueue.filter(
+        (notice) => notice.id !== d.readNotice,
       );
       b.blur();
       refreshChrome();

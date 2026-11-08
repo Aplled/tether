@@ -1500,6 +1500,89 @@ export class TetherCompanyStore {
       ]);
     });
   }
+  deleteIncident(
+    id: string,
+    revision: number,
+  ): { id: string; deleted: true; taskIds: string[] } {
+    const current = this.#get<Incident>("incident", id);
+    if (!current)
+      throw new CompanyError("not_found", "incident not found", 404);
+    if (current.revision !== revision)
+      throw new CompanyError(
+        "revision_conflict",
+        "incident changed since it was loaded",
+        409,
+      );
+    const taskIds = this.#list<IncidentTask>("task")
+      .filter((task) => task.incidentId === id)
+      .map((task) => task.id);
+    const notificationMemberIds = this.#list<Notification>("notification")
+      .filter((notification) => notification.incidentId === id)
+      .map((notification) => notification.memberId);
+    const affectedDelegations = this.#list<Delegation>("delegation").filter(
+      (delegation) => delegation.resourceIds.includes(id),
+    );
+    this.#transaction(() => {
+      const deleteByIncident = this.#db.prepare(
+        "DELETE FROM tether_records WHERE kind=? AND json_extract(json,'$.incidentId')=?",
+      );
+      for (const kind of [
+        "task",
+        "message",
+        "notification",
+        "assignment_plan",
+        "assignment_volunteer",
+      ])
+        deleteByIncident.run(kind, id);
+      for (const taskId of taskIds)
+        this.#db
+          .prepare(
+            "DELETE FROM tether_records WHERE kind='assignment_brief' AND json_extract(json,'$.taskId')=?",
+          )
+          .run(taskId);
+      // Remove grants created for this incident, including incident-resource
+      // grants and temporary node grants scoped by incidentId.
+      this.#db
+        .prepare(
+          "DELETE FROM tether_records WHERE kind='grant' AND (json_extract(json,'$.incidentId')=? OR (json_extract(json,'$.resourceType')='incident' AND json_extract(json,'$.resourceId')=?))",
+        )
+        .run(id, id);
+      this.#db.prepare("DELETE FROM message_dedup WHERE incident_id=?").run(id);
+      this.#db
+        .prepare("DELETE FROM incident_dedup WHERE incident_id=?")
+        .run(id);
+      for (const delegation of affectedDelegations) {
+        const resourceIds = delegation.resourceIds.filter(
+          (resourceId) => resourceId !== id,
+        );
+        if (!resourceIds.length)
+          this.#db
+            .prepare(
+              "DELETE FROM tether_records WHERE kind='delegation' AND id=?",
+            )
+            .run(delegation.id);
+        else
+          this.#put(
+            "delegation",
+            delegation.id,
+            { ...delegation, resourceIds, revision: delegation.revision + 1 },
+            delegation.revision + 1,
+          );
+      }
+      this.#db
+        .prepare("DELETE FROM tether_records WHERE kind='incident' AND id=?")
+        .run(id);
+      this.#bumpSemantic();
+      this.#emit("incident.deleted", "incident", id, [
+        ...new Set([
+          ...current.memberIds,
+          ...notificationMemberIds,
+          ...affectedDelegations.flatMap((item) => [item.fromId, item.toId]),
+        ]),
+      ]);
+    });
+    return { id, deleted: true, taskIds };
+  }
   postConversation(input: {
     scope: "company" | "workspace";
     workspaceId?: string;

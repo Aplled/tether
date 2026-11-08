@@ -99,7 +99,17 @@ export const sheet = (
 export function nodeForm(node = {}, people = [], regions = [], admin = false) {
   return sheet(
     node.id ? "Edit node" : "Add node",
-    `<input type="hidden" name="id" value="${h(node.id || "")}">${field("Name", "name", node.name, 'required maxlength="80"')}${picker("Type", "kind", ["service", "component", "workflow", "dataset", "resource", "person", "team"], node.kind || "service")}${textField("Description", "description", node.description, 'required maxlength="360"')}<div class="field-grid">${picker("Region", "regionId", regions, node.regionId)}${picker(
+    `<input type="hidden" name="id" value="${h(node.id || "")}">${field("Name", "name", node.name, 'required maxlength="80"')}<div class="field-grid">${picker("Type", "kind", ["service", "component", "workflow", "dataset", "resource", "person", "team"], node.kind || "service")}${picker(
+      "Business importance",
+      "criticality",
+      [
+        { id: "low", name: "Low importance" },
+        { id: "medium", name: "Standard importance" },
+        { id: "high", name: "High importance" },
+        { id: "critical", name: "Critical system" },
+      ],
+      node.criticality || "medium",
+    )}</div>${textField("Description", "description", node.description, 'required maxlength="360"')}<div class="field-grid">${picker("Region", "regionId", regions, node.regionId)}${picker(
       "Owner",
       "ownerId",
       people.map((p) => ({ ...p, detail: p.title })),
@@ -375,7 +385,7 @@ export function nodeInspector(
   const r = n.repository;
   return sheet(
     n.name,
-    `<div class="button-row"><span class="pill">${h(human(n.kind))}</span><span class="pill ${n.safetyMode ? "orange" : (n.status || n.state) === "healthy" ? "green" : "orange"}">${h(n.safetyLabel || human(n.status || n.state || "healthy"))}</span></div>${n.safetyMode ? `<p class="safety-detail">${h(n.safetyDetail)}. This reports the verified response, not a source-code repair.</p>` : ""}<p>${h(n.description)}</p><div class="detail-block"><span class="eyebrow">Owner</span><h3>${h(n.ownerName || "Unassigned")}</h3></div><div class="button-row">${canEdit ? `<button class="primary" data-edit-node="${h(n.id)}">Edit node</button>` : ""}${canIncident ? `<button data-incident-node="${h(n.id)}">Create incident</button>` : ""}${canWorkspace ? `<button data-workspace-node="${h(n.id)}">Create workspace</button>` : ""}</div><h3>Repository reference</h3>${r ? `<div class="source-reference"><b>${h(r.path.split("/").pop())}</b><small>${h(r.path)}${r.lineStart ? ` · Lines ${r.lineStart}${r.lineEnd ? `–${r.lineEnd}` : ""}` : ""}</small><div class="button-row"><button data-source="${h(r.id)}">Preview source</button><button data-copy="${h(r.path)}">Copy path</button></div></div>` : '<p class="muted">No repository file mapped.</p>'}<h3>Connected systems</h3>${
+    `<div class="button-row"><span class="pill">${h(human(n.kind))}</span><span class="pill ${(n.status || n.state) === "healthy" ? "green" : "orange"}">Health: ${h((n.status || n.state) === "healthy" ? "Running normally" : (n.status || n.state) === "degraded" ? "Degraded" : "Unknown")}</span>${n.safetyMode ? `<span class="pill orange">Response: ${h(n.safetyLabel || "Restricted")}</span>` : ""}<span class="pill ${n.criticality === "critical" ? "critical" : ""}">Business importance: ${h(n.criticality === "critical" ? "Critical system" : human(n.criticality || "standard"))}</span></div>${n.safetyMode ? `<p class="safety-detail">${h(n.safetyDetail)}. This reports the verified response, not a source-code repair.</p>` : ""}<p>${h(n.description)}</p><div class="detail-block"><span class="eyebrow">Owner</span><h3>${h(n.ownerName || "Unassigned")}</h3></div><div class="button-row">${canEdit ? `<button class="primary" data-edit-node="${h(n.id)}">Edit node</button>` : ""}${canIncident ? `<button data-incident-node="${h(n.id)}">Create incident</button>` : ""}${canWorkspace ? `<button data-workspace-node="${h(n.id)}">Create workspace</button>` : ""}</div><h3>Repository reference</h3>${r ? `<div class="source-reference"><b>${h(r.path.split("/").pop())}</b><small>${h(r.path)}${r.lineStart ? ` · Lines ${r.lineStart}${r.lineEnd ? `–${r.lineEnd}` : ""}` : ""}</small><div class="button-row"><button data-source="${h(r.id)}">Preview source</button><button data-copy="${h(r.path)}">Copy path</button></div></div>` : '<p class="muted">No repository file mapped.</p>'}<h3>Connected systems</h3>${
       edges
         .filter((e) => e.sourceId === n.id || e.targetId === n.id)
         .map(
