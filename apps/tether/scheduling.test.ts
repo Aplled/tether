@@ -57,3 +57,75 @@ test("escalation never promotes an unauthorized manager or overrides opt-out", (
     ),
   );
 });
+
+test("presence follows local hours, accepted on-call coverage, leave and expiring user choices", async () => {
+  const { effectiveAvailability } = await import("./scheduling.ts");
+  const member = {
+    ...seedMembers()[0]!,
+    timezone: "UTC",
+    workingHours: [{ weekday: 1, start: "09:00", end: "17:00" }],
+    availability: "available" as const,
+    onCallWindows: [],
+  };
+  assert.equal(
+    effectiveAvailability(member, new Date("2026-11-09T10:00:00Z")),
+    "available",
+  );
+  assert.equal(
+    effectiveAvailability(member, new Date("2026-11-09T20:00:00Z")),
+    "off_hours",
+  );
+  assert.equal(
+    effectiveAvailability(
+      { ...member, availability: "on_call" },
+      new Date("2026-11-09T20:00:00Z"),
+    ),
+    "off_hours",
+  );
+  const onCall = {
+    ...member,
+    onCallWindows: [
+      {
+        startsAt: "2026-11-09T18:00:00Z",
+        endsAt: "2026-11-09T22:00:00Z",
+        accepted: true,
+      },
+    ],
+  };
+  assert.equal(
+    effectiveAvailability(onCall, new Date("2026-11-09T20:00:00Z")),
+    "on_call",
+  );
+  assert.equal(
+    effectiveAvailability(
+      { ...onCall, availability: "away" },
+      new Date("2026-11-09T20:00:00Z"),
+    ),
+    "away",
+  );
+  assert.equal(
+    effectiveAvailability(
+      {
+        ...member,
+        availability: "meeting",
+        availabilityUntil: "2026-11-09T09:30:00Z",
+      },
+      new Date("2026-11-09T10:00:00Z"),
+    ),
+    "available",
+  );
+  assert.equal(
+    effectiveAvailability(
+      {
+        ...onCall,
+        leave: {
+          startsAt: "2026-11-09T18:00:00Z",
+          endsAt: "2026-11-09T22:00:00Z",
+          reason: "leave",
+        },
+      },
+      new Date("2026-11-09T20:00:00Z"),
+    ),
+    "away",
+  );
+});

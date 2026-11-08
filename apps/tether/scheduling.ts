@@ -1,4 +1,4 @@
-import type { Incident, Member } from "./types.ts";
+import type { Availability, Incident, Member } from "./types.ts";
 
 export type EscalationCandidate = {
   memberId: string;
@@ -69,6 +69,34 @@ export function isInWorkingWindow(member: Member, at: Date): boolean {
     );
   });
 }
+/** Public presence reflects accepted coverage and working hours, never grants authority. */
+export function effectiveAvailability(
+  member: Member,
+  at = new Date(),
+): Availability {
+  if (
+    !member.active ||
+    (member.leave &&
+      at >= new Date(member.leave.startsAt) &&
+      at < new Date(member.leave.endsAt))
+  )
+    return "away";
+  const setting =
+    member.availabilityUntil && new Date(member.availabilityUntil) <= at
+      ? "available"
+      : member.availability;
+  if (["focused", "meeting", "away"].includes(setting)) return setting;
+  const onCall = member.onCallWindows.some(
+    (window) =>
+      window.accepted &&
+      at >= new Date(window.startsAt) &&
+      at < new Date(window.endsAt),
+  );
+  if (onCall) return "on_call";
+  if (!isInWorkingWindow(member, at)) return "off_hours";
+  return setting === "off_hours" ? "off_hours" : "available";
+}
+
 export function chooseEscalation(input: {
   incident: Incident;
   members: Member[];

@@ -20,8 +20,9 @@ import {
   ImportService,
   nodeFromImport,
 } from "./imports.ts";
+import { proposeCanvasLayoutViaMcp } from "./layout-mcp.ts";
 import { createCompanyMcpSession, type CompanyMcpTool } from "./mcp.ts";
-import { chooseEscalation } from "./scheduling.ts";
+import { chooseEscalation, effectiveAvailability } from "./scheduling.ts";
 import {
   authorize,
   PermissionError,
@@ -65,6 +66,8 @@ const staticFiles = new Map([
   ["/panels.js", "panels.js"],
   ["/icons.js", "icons.js"],
   ["/styles.css", "styles.css"],
+  ["/canvas.css", "canvas.css"],
+  ["/canvas-layout.js", "canvas-layout.js"],
   ["/favicon.svg", "favicon.svg"],
 ]);
 const pretextFiles = new Set([
@@ -191,7 +194,7 @@ function publicMember(member: Member) {
     jobFamily: member.jobFamily,
     level: member.level,
     title: member.title,
-    availability: member.availability,
+    availability: effectiveAvailability(member),
     active: member.active,
   };
 }
@@ -219,6 +222,10 @@ export async function startTetherServer(
   auth.bootstrapPresentationAccounts();
   const imports = new ImportService();
   const briefs = new Map<string, TaskBrief>();
+  const responseChecks = new Map<
+    string,
+    { generation: string; fallback?: unknown; resolution?: unknown }
+  >();
   const analysisByScope = new Map<string, Record<string, unknown>>();
   const responseTarget = await RetryServiceTarget.start();
   const responseObserver = new RetryServiceObserver(responseTarget);
@@ -291,7 +298,7 @@ export async function startTetherServer(
     return new Set(
       incident.nodeIds.filter(
         (id) =>
-          ctx.role === "senior_manager" ||
+          company.isOrganizationAdmin(ctx.employeeId) ||
           company.permissionGrants(
             ctx.employeeId,
             { kind: "node", id },
@@ -309,6 +316,11 @@ export async function startTetherServer(
     return {
       ...incident,
       nodeIds: [...nodeIds],
+      totalNodeCount: incident.nodeIds.length,
+      restrictedNodeCount: incident.nodeIds.length - nodeIds.size,
+      allowedAutomaticAction: nodeIds.has("retry-route")
+        ? "disable_cross_tenant_retry"
+        : null,
       memberIds: [...incident.memberIds],
     };
   }
@@ -334,7 +346,7 @@ export async function startTetherServer(
   function capabilities(ctx: AuthContext): string[] {
     return [...roleTemplate(ctx.role)].filter((capability) => {
       if (capability === "organization:admin")
-        return ctx.role === "senior_manager";
+        return company.isOrganizationAdmin(ctx.employeeId);
       return (
         company.permissionGrants(ctx.employeeId, undefined, capability).length >
         0
@@ -344,7 +356,29 @@ export async function startTetherServer(
   function visibleState(ctx: AuthContext): ViewState {
     const state = company.allState();
     const member = company.member(ctx.employeeId)!;
-    const isAdmin = ctx.role === "senior_manager";
+    const isAdmin = company.isOrganizationAdmin(ctx.employeeId);
+    const workspaces = state.workspaces
+      .filter(
+        (workspace) => isAdmin || workspace.memberIds.includes(ctx.employeeId),
+      )
+      .map((workspace) => ({
+        ...workspace,
+        nodeIds: workspace.nodeIds.filter(
+          (id) =>
+            isAdmin ||
+            company.permissionGrants(
+              ctx.employeeId,
+              { kind: "node", id },
+              "graph:read",
+            ).length,
+        ),
+      }));
+    const workspaceIds = new Set(workspaces.map((workspace) => workspace.id));
+    const conversations = state.conversations.filter(
+      (message) =>
+        message.scope === "company" ||
+        (message.workspaceId && workspaceIds.has(message.workspaceId)),
+    );
     if (ctx.role === "marketing") {
       const notices = state.notifications
         .filter(
@@ -355,7 +389,15 @@ export async function startTetherServer(
       return {
         organization: state.organization,
         departments: state.departments,
-        members: state.members.map(publicMember),
+        members: state.members.map((entry) =>
+          entry.id === ctx.employeeId
+            ? {
+                ...entry,
+                availabilitySetting: entry.availability,
+                availability: effectiveAvailability(entry),
+              }
+            : publicMember(entry),
+        ),
         nodes: state.nodes.filter(
           (node) =>
             node.ownerId === ctx.employeeId || node.id === "status-page",
@@ -364,6 +406,8 @@ export async function startTetherServer(
         regions: [],
         repositories: [],
         incidents: [],
+        workspaces,
+        conversations,
         tasks: [],
         messages: [],
         notifications: notices,
@@ -391,6 +435,7 @@ export async function startTetherServer(
         },
         analysisByIncident: {},
         proposalsByIncident: {},
+        responseByIncident: {},
         analysis: null,
         proposal: null,
       };
@@ -472,6 +517,69 @@ export async function startTetherServer(
         return proposal ? [[incident.id, projectProposal(proposal)]] : [];
       }),
     );
+    const responseByIncident = Object.fromEntries(
+      rawIncidents.flatMap((incident) => {
+        const proposal = [...responseActions.values()]
+          .reverse()
+          .find((item) => item.incidentId === incident.id);
+        if (
+          !proposal ||
+          proposal.target.generation !== responseTarget.generation
+        )
+          return [];
+        const execution = responseExecutions.get(proposal.actionId),
+          checks = responseChecks.get(incident.id);
+        if (!execution && !checks) return [];
+        return [
+          [
+            incident.id,
+            {
+              incidentId: incident.id,
+              affectedNodeIds:
+                execution?.state === "verified" &&
+                execution.routeDisabled === true
+                  ? [...readableNodeIds(ctx, incident, state)].filter(
+                      (id) => id === "retry-route",
+                    )
+                  : [],
+              ...(execution?.state === "verified" &&
+              execution.routeDisabled === true
+                ? { safetyMode: "unsafe_route_disabled" }
+                : {}),
+              containment: execution
+                ? {
+                    status: execution.state,
+                    observedAt: execution.observedAt,
+                    checks: [
+                      {
+                        label: "Retry endpoint disabled",
+                        passed: execution.routeDisabled,
+                      },
+                      {
+                        label: "Service control reachable",
+                        passed: execution.controlReachable,
+                      },
+                      {
+                        label: "Fallback ready",
+                        passed: execution.fallbackReady,
+                      },
+                    ],
+                    ...(execution.reason ? { reason: execution.reason } : {}),
+                  }
+                : null,
+              fallback:
+                checks?.generation === responseTarget.generation
+                  ? (checks.fallback ?? null)
+                  : null,
+              resolution:
+                checks?.generation === responseTarget.generation
+                  ? (checks.resolution ?? null)
+                  : null,
+            },
+          ],
+        ];
+      }),
+    );
     const activeAnalysis =
       rawIncidents
         .map((incident) => analysisByIncident[incident.id])
@@ -508,7 +616,13 @@ export async function startTetherServer(
       ...state,
       eventCursor: company.recipientCursor(ctx.employeeId),
       members: state.members.map((entry) =>
-        isAdmin || entry.id === ctx.employeeId ? entry : publicMember(entry),
+        isAdmin || entry.id === ctx.employeeId
+          ? {
+              ...entry,
+              availabilitySetting: entry.availability,
+              availability: effectiveAvailability(entry),
+            }
+          : publicMember(entry),
       ),
       nodes: state.nodes.filter((node) => allowedNodeIds.has(node.id)),
       edges: state.edges.filter(
@@ -524,6 +638,8 @@ export async function startTetherServer(
         .filter((region) => region.nodeIds.length),
       repositories,
       incidents,
+      workspaces,
+      conversations,
       tasks: visibleTasks,
       messages: visibleMessages,
       notifications: state.notifications.filter(
@@ -559,6 +675,7 @@ export async function startTetherServer(
       },
       analysisByIncident,
       proposalsByIncident,
+      responseByIncident,
       analysis: activeAnalysis,
       proposal: activeProposal ? projectProposal(activeProposal) : null,
     };
@@ -576,6 +693,118 @@ export async function startTetherServer(
       !Array.isArray(body.payload)
         ? (body.payload as Record<string, unknown>)
         : {};
+    if (type === "graph.organize") {
+      allow(ctx, "organization:admin", "organization", "northstar");
+      const before = company.allState(),
+        requested =
+          payload.nodeIds === undefined
+            ? before.nodes.map((node) => node.id)
+            : array(payload.nodeIds, "nodeIds", 500);
+      if (
+        new Set(requested).size !== requested.length ||
+        requested.some((id) => !before.nodes.some((node) => node.id === id))
+      )
+        throw new HttpError(400, "invalid_scope", "layout nodes are invalid");
+      const selected = new Set(requested),
+        nodes = before.nodes.filter((node) => selected.has(node.id));
+      const result = await proposeCanvasLayoutViaMcp({
+        nodes: nodes.map((node) => ({
+          ...node,
+          departmentName:
+            before.departments.find(
+              (department) =>
+                department.id ===
+                before.members.find((member) => member.id === node.ownerId)
+                  ?.departmentId,
+            )?.name ?? "Other systems",
+        })),
+        edges: before.edges.filter(
+          (edge) => selected.has(edge.sourceId) && selected.has(edge.targetId),
+        ),
+        authorize: () => {
+          const current = auth.authenticate(token);
+          allow(current, "organization:admin", "organization", "northstar");
+        },
+      });
+      const latest = company.allState();
+      if (
+        latest.organization.semanticRevision !==
+          before.organization.semanticRevision ||
+        nodes.some(
+          (node) =>
+            latest.nodes.find((current) => current.id === node.id)
+              ?.layoutRevision !== node.layoutRevision,
+        )
+      )
+        throw new HttpError(
+          409,
+          "revision_conflict",
+          "canvas changed while its layout was being proposed",
+        );
+      // Recheck after awaiting MCP and before committing the bounded positions.
+      allow(
+        auth.authenticate(token),
+        "organization:admin",
+        "organization",
+        "northstar",
+      );
+      company.updateNodeLayouts(
+        result.positions.map((position) => ({
+          ...position,
+          layoutRevision:
+            nodes.find((node) => node.id === position.id)?.layoutRevision ?? -1,
+        })),
+        selected,
+      );
+      return result;
+    }
+    if (
+      ["workspace.create", "workspace.update", "workspace.delete"].includes(
+        type,
+      )
+    ) {
+      allow(ctx, "organization:admin", "organization", "northstar");
+      if (type === "workspace.create")
+        return company.createWorkspace({
+          name: string(payload.name, "name", 180),
+          nodeIds: array(payload.nodeIds ?? [], "nodeIds"),
+          memberIds: array(payload.memberIds ?? [], "memberIds"),
+          createdBy: ctx.employeeId,
+        });
+      const id = string(payload.id, "id", 100),
+        revision = number(payload.revision, "revision");
+      if (type === "workspace.delete") {
+        company.deleteWorkspace(id, revision);
+        return { id, deleted: true };
+      }
+      const patch =
+        payload.patch &&
+        typeof payload.patch === "object" &&
+        !Array.isArray(payload.patch)
+          ? (payload.patch as Record<string, unknown>)
+          : payload;
+      return company.updateWorkspace(id, revision, {
+        ...(patch.name === undefined
+          ? {}
+          : { name: string(patch.name, "name", 180) }),
+        ...(patch.nodeIds === undefined
+          ? {}
+          : { nodeIds: array(patch.nodeIds, "nodeIds") }),
+        ...(patch.memberIds === undefined
+          ? {}
+          : { memberIds: array(patch.memberIds, "memberIds") }),
+      });
+    }
+    if (type === "conversation.send")
+      return company.postConversation({
+        scope: string(payload.scope, "scope", 20) as "company" | "workspace",
+        ...(payload.workspaceId === undefined
+          ? {}
+          : { workspaceId: string(payload.workspaceId, "workspaceId", 100) }),
+        authorId: ctx.employeeId,
+        text: string(payload.text, "text", 4000),
+        idempotencyKey: string(body.idempotencyKey, "idempotencyKey", 120),
+      });
     if (type === "member.create") {
       allow(ctx, "organization:admin", "organization", "northstar");
       const id = `employee-${string(payload.email, "email", 200)
@@ -609,8 +838,17 @@ export async function startTetherServer(
         allow(ctx, "directory:write", "organization", "northstar");
       const current = company.member(id);
       if (!current) throw new HttpError(404, "not_found", "member not found");
+      if (
+        id !== ctx.employeeId &&
+        ("notifications" in rawPatch || "onCallWindows" in rawPatch)
+      )
+        throw new HttpError(
+          403,
+          "consent_required",
+          "only the employee can change their alert preferences and accepted on-call coverage",
+        );
       const allowedFields =
-        id === ctx.employeeId && ctx.role !== "senior_manager"
+        id === ctx.employeeId && !company.isOrganizationAdmin(ctx.employeeId)
           ? selfFields
           : new Set([
               "name",
@@ -666,16 +904,45 @@ export async function startTetherServer(
       });
     }
     if (type === "node.create") {
-      allow(ctx, "organization:admin", "organization", "northstar");
+      const admin = company.isOrganizationAdmin(ctx.employeeId);
+      if (admin) allow(ctx, "organization:admin", "organization", "northstar");
+      else if (!["engineer", "data_science_manager"].includes(ctx.role))
+        throw new HttpError(
+          403,
+          "forbidden",
+          "your role cannot create systems",
+        );
+      const regionId = string(payload.regionId, "regionId", 100);
+      if (
+        !admin &&
+        !company
+          .allState()
+          .nodes.some(
+            (node) =>
+              node.regionId === regionId &&
+              company.permissionGrants(
+                ctx.employeeId,
+                { kind: "node", id: node.id },
+                "graph:read",
+              ).length,
+          )
+      )
+        throw new HttpError(
+          403,
+          "forbidden",
+          "choose a region you can currently access",
+        );
       return company.createNode({
         id: `node-${randomUUID()}`,
         name: string(payload.name, "name", 160),
         kind: string(payload.kind, "kind", 40) as CompanyNode["kind"],
         description: string(payload.description, "description", 1000),
         regionId: string(payload.regionId, "regionId", 100),
-        ...(payload.ownerId
-          ? { ownerId: string(payload.ownerId, "ownerId", 100) }
-          : {}),
+        ...(!admin
+          ? { ownerId: ctx.employeeId }
+          : payload.ownerId
+            ? { ownerId: string(payload.ownerId, "ownerId", 100) }
+            : {}),
         criticality: string(
           payload.criticality,
           "criticality",
@@ -688,7 +955,35 @@ export async function startTetherServer(
     }
     if (type === "node.update") {
       const id = string(payload.id, "id", 100);
-      if (ctx.role !== "senior_manager") allow(ctx, "graph:write", "node", id);
+      if (!company.isOrganizationAdmin(ctx.employeeId)) {
+        allow(ctx, "graph:write", "node", id);
+        const patch = (payload.patch ?? {}) as Record<string, unknown>;
+        if ("ownerId" in patch && patch.ownerId !== ctx.employeeId)
+          throw new HttpError(
+            403,
+            "forbidden",
+            "only an administrator can change the system owner",
+          );
+        if (
+          "regionId" in patch &&
+          !company
+            .allState()
+            .nodes.some(
+              (node) =>
+                node.regionId === patch.regionId &&
+                company.permissionGrants(
+                  ctx.employeeId,
+                  { kind: "node", id: node.id },
+                  "graph:read",
+                ).length,
+            )
+        )
+          throw new HttpError(
+            403,
+            "forbidden",
+            "choose a region you can currently access",
+          );
+      }
       return company.updateNode(
         id,
         number(payload.semanticRevision, "semanticRevision"),
@@ -697,7 +992,8 @@ export async function startTetherServer(
     }
     if (type === "node.move") {
       const id = string(payload.id, "id", 100);
-      if (ctx.role !== "senior_manager") allow(ctx, "graph:write", "node", id);
+      if (!company.isOrganizationAdmin(ctx.employeeId))
+        allow(ctx, "graph:write", "node", id);
       return company.updateNodeLayout(
         id,
         number(payload.layoutRevision, "layoutRevision"),
@@ -707,7 +1003,8 @@ export async function startTetherServer(
     }
     if (type === "node.delete") {
       const id = string(payload.id, "id", 100);
-      if (ctx.role !== "senior_manager") allow(ctx, "graph:write", "node", id);
+      if (!company.isOrganizationAdmin(ctx.employeeId))
+        allow(ctx, "graph:write", "node", id);
       company.deleteNode(
         id,
         number(payload.semanticRevision, "semanticRevision"),
@@ -715,7 +1012,22 @@ export async function startTetherServer(
       return { id, deleted: true };
     }
     if (type === "edge.create") {
-      allow(ctx, "organization:admin", "organization", "northstar");
+      if (company.isOrganizationAdmin(ctx.employeeId))
+        allow(ctx, "organization:admin", "organization", "northstar");
+      else {
+        allow(
+          ctx,
+          "graph:write",
+          "node",
+          string(payload.sourceId, "sourceId", 100),
+        );
+        allow(
+          ctx,
+          "graph:read",
+          "node",
+          string(payload.targetId, "targetId", 100),
+        );
+      }
       return company.createEdge({
         id: `edge-${randomUUID()}`,
         sourceId: string(payload.sourceId, "sourceId", 100),
@@ -728,15 +1040,97 @@ export async function startTetherServer(
         optional: Boolean(payload.optional),
       });
     }
-    if (type === "edge.delete") {
+    if (type === "edge.update") {
+      if (company.isOrganizationAdmin(ctx.employeeId))
+        allow(ctx, "organization:admin", "organization", "northstar");
+      else {
+        const edge = company
+          .allState()
+          .edges.find((item) => item.id === payload.id);
+        if (!edge) throw new HttpError(404, "not_found", "edge not found");
+        allow(ctx, "graph:write", "node", edge.sourceId);
+        allow(ctx, "graph:read", "node", edge.targetId);
+      }
+      return company.updateEdge(
+        string(payload.id, "id", 140),
+        number(payload.revision, "revision"),
+        (payload.patch ?? {}) as any,
+      );
+    }
+    if (type === "repository.delete") {
       allow(ctx, "organization:admin", "organization", "northstar");
+      const id = string(payload.id, "id", 140);
+      company.deleteRepositoryReference(
+        id,
+        number(payload.revisionNumber, "revisionNumber"),
+      );
+      return { id, deleted: true };
+    }
+    if (type === "edge.delete") {
+      if (company.isOrganizationAdmin(ctx.employeeId))
+        allow(ctx, "organization:admin", "organization", "northstar");
+      else {
+        const edge = company
+          .allState()
+          .edges.find((item) => item.id === payload.id);
+        if (!edge) throw new HttpError(404, "not_found", "edge not found");
+        allow(ctx, "graph:write", "node", edge.sourceId);
+        allow(ctx, "graph:read", "node", edge.targetId);
+      }
       const id = string(payload.id, "id", 140);
       company.deleteEdge(id, number(payload.revision, "revision"));
       return { id, deleted: true };
     }
-    if (type === "repository.save") {
+    if (type === "repository.save" || type === "repository.update") {
       allow(ctx, "organization:admin", "organization", "northstar");
+      const sourcePath = string(payload.path, "path", 300),
+        sourceRevision = string(payload.revision, "revision", 40);
+      if (
+        !/^(?:apps|packages|fixtures|integration-tests)\/[A-Za-z0-9._/-]+$/.test(
+          sourcePath,
+        ) ||
+        sourcePath.includes("..") ||
+        !/^(?:WORKTREE|[a-f0-9]{7,40})$/.test(sourceRevision)
+      )
+        throw new HttpError(
+          400,
+          "invalid_source",
+          "source reference is outside the configured repository",
+        );
+      try {
+        if (sourceRevision === "WORKTREE") {
+          const real = realpathSync(resolve(projectRoot, sourcePath));
+          if (
+            !real.startsWith(`${realpathSync(projectRoot)}/`) ||
+            !lstatSync(real).isFile()
+          )
+            throw new Error("outside repository");
+        } else
+          await execFile(
+            "git",
+            ["cat-file", "-e", `${sourceRevision}:${sourcePath}`],
+            { cwd: projectRoot, timeout: 3000, maxBuffer: 1024 },
+          );
+      } catch {
+        throw new HttpError(
+          400,
+          "invalid_source",
+          "repository file or revision is unavailable",
+        );
+      }
+      allow(
+        auth.authenticate(token),
+        "organization:admin",
+        "organization",
+        "northstar",
+      );
       return company.addRepositoryReference({
+        ...(payload.id === undefined
+          ? {}
+          : {
+              id: string(payload.id, "id", 140),
+              revisionNumber: number(payload.revisionNumber, "revisionNumber"),
+            }),
         nodeId: string(payload.nodeId, "nodeId", 100),
         repository: "local:hackutd",
         revision: string(payload.revision, "revision", 40),
@@ -852,6 +1246,15 @@ export async function startTetherServer(
       return company.createIncident({
         title: string(payload.title, "title", 180),
         observation: string(payload.observation, "observation", 2000),
+        ...(payload.priority === undefined
+          ? {}
+          : {
+              priority: string(
+                payload.priority,
+                "priority",
+                20,
+              ) as Incident["priority"],
+            }),
         regionId:
           typeof payload.regionId === "string" ? payload.regionId : "global",
         nodeIds: array(payload.nodeIds, "nodeIds", 50),
@@ -862,27 +1265,25 @@ export async function startTetherServer(
         idempotencyKey: string(body.idempotencyKey, "idempotencyKey", 120),
       });
     }
-    if (type === "incident.update" || type === "workspace.update") {
+    if (type === "incident.share_systems") {
+      const incidentId = string(payload.incidentId, "incidentId", 100);
+      allow(ctx, "organization:admin", "organization", "northstar");
+      allow(ctx, "incident:assign", "incident", incidentId);
+      return company.shareIncidentSystems(
+        incidentId,
+        array(payload.memberIds, "memberIds", 100),
+        array(payload.nodeIds, "nodeIds", 50),
+      );
+    }
+    if (type === "incident.update") {
       const id = string(payload.id, "id", 100);
       allow(ctx, "incident:assign", "incident", id);
       const patch =
-        type === "workspace.update"
-          ? {
-              ...(payload.memberIds
-                ? { memberIds: array(payload.memberIds, "memberIds", 30) }
-                : {}),
-              ...(payload.nodeIds
-                ? { nodeIds: array(payload.nodeIds, "nodeIds", 50) }
-                : {}),
-              ...(payload.name
-                ? { title: string(payload.name, "name", 180) }
-                : {}),
-            }
-          : payload.patch &&
-              typeof payload.patch === "object" &&
-              !Array.isArray(payload.patch)
-            ? payload.patch
-            : {};
+        payload.patch &&
+        typeof payload.patch === "object" &&
+        !Array.isArray(payload.patch)
+          ? payload.patch
+          : {};
       return company.updateIncident(
         id,
         number(payload.revision, "revision"),
@@ -1096,7 +1497,7 @@ export async function startTetherServer(
           return scopedTasks.filter(
             (task) =>
               task.ownerId === live.employeeId ||
-              live.role === "senior_manager",
+              company.isOrganizationAdmin(live.employeeId),
           );
         if (name === "list_fallback_plans")
           return [
@@ -1151,8 +1552,73 @@ export async function startTetherServer(
             "analysis_stale",
             "incident scope or evidence changed during analysis",
           );
+        const labels: Record<string, [string, string]> = {
+          get_incident: [
+            "Incident report",
+            "Read the current report and incident scope.",
+          ],
+          get_dependencies: [
+            "Connected systems",
+            "Read the systems and connections available to you.",
+          ],
+          analyze_incident_impact: [
+            "Dependency check",
+            "Evaluated the recorded dependency states. This does not establish a root cause.",
+          ],
+          simulate_containment: [
+            "Containment simulation",
+            "Simulated dependency outcomes without changing any service.",
+          ],
+          list_response_tasks: [
+            "Assigned tasks",
+            "Read the current tasks available to you.",
+          ],
+          get_incident_timeline: [
+            "Team updates",
+            "Read the persisted incident conversation.",
+          ],
+          list_fallback_plans: [
+            "Fallback plan",
+            "Read the configured fallback. It still requires independent verification.",
+          ],
+        };
         const value = {
           incidentId,
+          report: {
+            headline:
+              analyzed.mode === "live"
+                ? "Analysis ready for review"
+                : "Evidence review completed",
+            observation: currentIncident.observation,
+            findings: analyzed.steps.map((step) => ({
+              title: labels[step.tool]?.[0] ?? "Evidence check",
+              status: step.status,
+              detail:
+                step.status === "observed" ||
+                step.status === "simulated" ||
+                step.status === "completed"
+                  ? (labels[step.tool]?.[1] ??
+                    "A scoped evidence check completed.")
+                  : "This check did not return usable evidence. Review the technical details.",
+            })),
+            nextSteps: [
+              "Review the reported issue with the assigned responders.",
+              "Check the linked source and tests before choosing a change.",
+              "Review the exact proposed action before asking the commander to approve it.",
+            ],
+            unknowns: [
+              "The report and dependency checks alone do not prove a root cause.",
+              "Containment and fallback are unverified until their independent checks pass.",
+            ],
+            limitations:
+              analyzed.mode === "scripted"
+                ? [
+                    "Live model analysis was unavailable; these are scripted evidence checks.",
+                  ]
+                : [
+                    "Model conclusions require human review against the evidence.",
+                  ],
+          },
           mcp: { protocolVersion: mcp.protocolVersion, tools: mcp.tools },
           ...analyzed,
         };
@@ -1169,7 +1635,8 @@ export async function startTetherServer(
         task = state.tasks.find((t) => t.id === taskId);
       if (
         !task ||
-        (task.ownerId !== ctx.employeeId && ctx.role !== "senior_manager")
+        (task.ownerId !== ctx.employeeId &&
+          !company.isOrganizationAdmin(ctx.employeeId))
       )
         throw new HttpError(
           403,
@@ -1212,7 +1679,10 @@ export async function startTetherServer(
         task = state.tasks.find((t) => t.id === brief.taskId);
       if (!task || briefIsStale(brief, state, task))
         throw new HttpError(409, "brief_stale", "task brief is stale");
-      if (task.ownerId !== ctx.employeeId && ctx.role !== "senior_manager")
+      if (
+        task.ownerId !== ctx.employeeId &&
+        !company.isOrganizationAdmin(ctx.employeeId)
+      )
         throw new HttpError(403, "forbidden", "task brief is restricted");
       return brief;
     }
@@ -1223,6 +1693,13 @@ export async function startTetherServer(
         incident = state.incidents.find((item) => item.id === incidentId);
       if (!incident)
         throw new HttpError(404, "not_found", "incident not found");
+      if (!incident.nodeIds.includes("retry-route"))
+        throw new HttpError(
+          409,
+          "automatic_action_unavailable",
+          "No automatic action is configured for these systems; continue with assigned tasks.",
+        );
+      allow(ctx, "graph:read", "node", "retry-route");
       const analysis = analysisByScope.get(scopeKey(ctx, incident, state));
       if (!analysis)
         throw new HttpError(
@@ -1316,6 +1793,10 @@ export async function startTetherServer(
           "containment must be independently verified first",
         );
       const verified = await responseObserver.verifyFallback();
+      responseChecks.set(incidentId, {
+        generation: responseTarget.generation,
+        fallback: verified,
+      });
       if (verified.verified) fallbackVerified.add(incidentId);
       return verified;
     }
@@ -1358,6 +1839,11 @@ export async function startTetherServer(
         .incidents.find((item) => item.id === incidentId);
       if (!incident)
         throw new HttpError(404, "not_found", "incident not found");
+      responseChecks.set(incidentId, {
+        generation: responseTarget.generation,
+        fallback,
+        resolution: verified,
+      });
       const resolved = company.resolveIncident(
         incidentId,
         incident.revision,
@@ -1438,15 +1924,33 @@ export async function startTetherServer(
           }),
         );
         let closed = false;
+        let heartbeat: ReturnType<typeof setInterval> | undefined;
+        let lease: ReturnType<typeof setTimeout> | undefined;
+        let unsubscribe = () => {};
+        const cleanup = () => {
+          if (closed) return;
+          closed = true;
+          clearInterval(heartbeat);
+          clearTimeout(lease);
+          unsubscribe();
+        };
+        const end = () => {
+          cleanup();
+          if (!res.writableEnded && !res.destroyed) res.end();
+        };
+        req.once("close", cleanup);
+        res.once("close", cleanup);
+        res.once("finish", cleanup);
+        res.once("error", end);
         let lastCursor = cursor,
           sentInitial = false;
-        const send = () => {
+        const send = (force = false) => {
           if (closed) return;
           try {
             const current = auth.authenticate(token);
             const state = visibleState(current);
             const visibleCursor = Number(state.eventCursor ?? 0);
-            if (visibleCursor > lastCursor || !sentInitial) {
+            if (visibleCursor > lastCursor || !sentInitial || force) {
               res.write(
                 `id: ${visibleCursor}\nevent: state\ndata: ${JSON.stringify(state)}\n\n`,
               );
@@ -1454,40 +1958,39 @@ export async function startTetherServer(
               sentInitial = true;
             }
           } catch {
-            closed = true;
-            res.end();
+            end();
           }
         };
-        send();
-        const unsubscribe = company.subscribe((event: CompanyEvent) => {
+        unsubscribe = company.subscribe((event: CompanyEvent) => {
+          if (closed) return;
           try {
             const current = auth.authenticate(token);
             if (
               event.memberIds.includes(current.employeeId) ||
-              current.role === "senior_manager"
+              company.isOrganizationAdmin(current.employeeId)
             )
               send();
           } catch {
-            closed = true;
-            res.end();
+            end();
           }
         });
-        const heartbeat = setInterval(() => {
+        let heartbeatCount = 0;
+        heartbeat = setInterval(() => {
           if (!closed) {
             try {
               auth.authenticate(token);
               res.write(": heartbeat\n\n");
+              if (++heartbeatCount % 4 === 0) send(true);
             } catch {
-              closed = true;
-              res.end();
+              end();
             }
           }
         }, 15_000);
-        req.once("close", () => {
-          closed = true;
-          clearInterval(heartbeat);
-          unsubscribe();
-        });
+        // HTTP/1 browsers share a small connection pool across same-origin tabs.
+        // Yield each stream so queued actions can run; the client reconnects after
+        // EOF with its cursor and receives a freshly authorized current snapshot.
+        lease = setTimeout(end, 10_000);
+        send();
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/source") {
@@ -1499,6 +2002,7 @@ export async function startTetherServer(
         const ref = company.allState().repositories.find((r) => r.id === id);
         if (!ref) throw new HttpError(404, "not_found", "source not found");
         let text: string;
+        let editorUrl: string | undefined;
         if (ref.revision === "WORKTREE") {
           const candidate = resolve(projectRoot, ref.path),
             realRoot = realpathSync(projectRoot),
@@ -1509,6 +2013,7 @@ export async function startTetherServer(
           )
             throw new HttpError(403, "source_rejected", "source path rejected");
           text = (await readFile(real, "utf8")).slice(0, 64 * 1024);
+          editorUrl = `vscode://file${real.split("/").map(encodeURIComponent).join("/")}:${ref.lineStart ?? 1}`;
         } else {
           try {
             const result = await execFile(
@@ -1533,6 +2038,7 @@ export async function startTetherServer(
         return json(res, 200, {
           path: ref.path,
           revision: ref.revision,
+          ...(editorUrl ? { editorUrl } : {}),
           ...(ref.lineStart ? { lineStart: ref.lineStart } : {}),
           ...(ref.lineEnd ? { lineEnd: ref.lineEnd } : {}),
           text,

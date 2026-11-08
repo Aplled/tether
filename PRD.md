@@ -1,7 +1,11 @@
 # Product Requirements Document — Tether
 
+**November 8 interaction rebuild:** The latest accepted scope is an editable company canvas with saved ordinary workspaces, four real logins, scoped incident collaboration, live Nemotron tool-assisted analysis, and server-verified response outcomes. Desktop readability and fresh blind browser walkthroughs are the acceptance gate. Current behavior is specified in [the rebuild contract](docs/TETHER-REBUILD-CONTRACT.md) and [walkthrough](docs/TETHER-RUNBOOK.md). Older checkpoint statements below, including unavailable model inference, planning-only work, and no-UI restrictions, describe their historical dates and do not override this scope.
+
 **Approved direction, November 8:** The user reviewed and approved [TETHER-COMPANY-PLAN.md](docs/TETHER-COMPANY-PLAN.md), including company setup, four-account auth, one canonical graph, scoped live collaboration, Graphite canvas reuse, coding-agent task briefs, schedules, and escalation. Implementation is authorized and in progress under [TETHER-BUILD-CONTRACT.md](docs/TETHER-BUILD-CONTRACT.md). Target tracks are **NVIDIA + NMC²**; earlier Photon recommendations below are historical. The source brief and original checkpoint remain below as history and roadmap context, not a claim that every listed feature is complete. Current product instructions are in [TETHER-RUNBOOK.md](docs/TETHER-RUNBOOK.md).
+
 ## The Local-First, Agentic Cyber-Resilience Platform
+
 ### Product Requirements Document | HackUTD 2026
 
 **Version:** 3.2 — accepted demo direction\

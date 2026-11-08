@@ -165,6 +165,7 @@ test("HTTP projections do not cross employee node or analysis scopes", async (t)
     payload: { incidentId: incident.id },
     idempotencyKey: randomUUID(),
   });
-  assert.equal(priyaPrepare.status, 409);
-  assert.equal(priyaPrepare.body.code, "analysis_required");
+  // Missing system access is rejected before exposing whether analysis exists.
+  assert.equal(priyaPrepare.status, 403);
+  assert.equal(priyaPrepare.body.code, "RESOURCE_GRANT_REQUIRED");
 });

@@ -1,11 +1,17 @@
 # Project collaboration rules
 
+- LATEST USER DIRECTION — November 8, 2026: the user rejected the current interface after hands-on testing and explicitly authorized a complete interaction rebuild and an upgrade of all implementation agents. GPT-6 Astra is selected for the three rebuild workers; this supersedes the older GPT-5.6-only requirement for these assignments. Use Graphite's actual canvas, context-menu, navigation, and tab source as a read-only reference. Prioritize stable inputs, readable plain-English results, organized maps, real saved workspaces separate from incidents, full-size incident/chat views, searchable multi-select controls, edge editing/deletion, back navigation, and a complete setup-to-response rehearsal. Do not claim readiness from API/unit checks alone. The Supabase connection now exposes a verified active Tether project; local SQLite remains the accepted presentation backend, and no cloud migration is requested by this rebuild.
+- LATEST PRESENTATION AND VERIFICATION DIRECTION — November 8: prioritize desktop layouts. Use large, plain explanations, readable focused maps, and evidence-based animation instead of raw tool bodies or technical shorthand. Continue fresh-context browser walkthroughs through setup, ordinary workspaces, incidents, all four logins, and recovery; fix and retest actual UI failures. Recorded-check playback must be labeled as replay and must never imply live execution or a repaired service. Browser reviewers get no builder guidance or source access beyond credentials; the lead coordinates fixes after their independent findings.
+
 ## User communication preferences
+
 <!-- codex-user-preferences:start -->
+
 - Default to short, plain, direct explanations and simple solutions unless the user asks for more detail or complexity.
 - Avoid buzzwords and elaborate acknowledgments.
 - Acknowledge corrections with the exact format `<topic>: acknowledged.`
 - iRemember is not Vyom's project. Never attribute or credit it to him.
+
 <!-- codex-user-preferences:end -->
 
 - Product name is Tether, selected in the latest user request. Zero Day is the hackathon theme, not the app name.

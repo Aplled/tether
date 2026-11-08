@@ -101,6 +101,7 @@ export type Incident = {
   id: IncidentId;
   title: string;
   observation: string;
+  priority?: "low" | "medium" | "high" | "critical";
   status: "open" | "acknowledged" | "investigating" | "verified" | "resolved";
   regionId: string;
   nodeIds: NodeId[];
@@ -149,6 +150,8 @@ export type ResourceGrant = {
   memberId: MemberId;
   resourceType: "organization" | "region" | "node" | "repository" | "incident";
   resourceId: string;
+  // Explicit incident sharing is effective only inside current incident membership and scope.
+  incidentId?: IncidentId;
   capabilities: string[];
   revision: number;
 };
@@ -161,6 +164,26 @@ export type Delegation = {
   capabilities: string[];
   resourceIds: string[];
   revision: number;
+};
+
+export type Workspace = {
+  id: string;
+  name: string;
+  nodeIds: NodeId[];
+  memberIds: MemberId[];
+  createdBy: MemberId;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ConversationMessage = {
+  id: string;
+  scope: "company" | "workspace";
+  workspaceId?: string;
+  authorId: MemberId;
+  text: string;
+  sequence: number;
+  createdAt: string;
 };
 
 export type CompanyState = {
@@ -176,6 +199,8 @@ export type CompanyState = {
   regions: Region[];
   repositories: RepositoryReference[];
   incidents: Incident[];
+  workspaces: Workspace[];
+  conversations: ConversationMessage[];
   tasks: IncidentTask[];
   messages: Message[];
   notifications: Notification[];

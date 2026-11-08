@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-08T10:26:31.366Z",
+  "product": "Tether",
+  "baseCommit": "de8dbe59bb3fe7e9d3ca63ab622d3cc48730547e",
+  "provenance": "Synthetic company records, loopback local services, and actual CUA browser interactions. No production infrastructure.",
+  "runtime": {
+    "node": "26.13.0",
+    "url": "http://127.0.0.1:4173",
+    "storage": "Local SQLite",
+    "globalNodeChanged": false,
+    "qaServersStopped": true
+  },
+  "checks": [
+    {
+      "command": "./scripts/dev.sh run tether:check",
+      "passed": 58,
+      "failed": 0,
+      "note": "Includes actual six-connection saturation, queued request recovery, reconnect, cancellation, and revoked-stream regression."
+    },
+    {
+      "command": "./scripts/dev.sh run demo:web:check",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "command": "./scripts/dev.sh run brev:check",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "command": "./scripts/dev.sh run typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "Pinned Prettier check on changed source and documentation; git diff --check; client syntax; bash -n scripts/brev-forward.sh",
+      "status": "passed"
+    },
+    {
+      "command": "Read-only staged-content credential scan",
+      "credentialFindings": 0
+    }
+  ],
+  "historicalCore": {
+    "passed": 60,
+    "evidence": "VERIFICATION.json",
+    "rerunForRebuild": false,
+    "note": "Original response and encrypted three-local-peer modules remain unchanged; not presented as new browser evidence."
+  },
+  "browser": {
+    "method": "Four fresh-context GPT-6 Astra reviewers received the URL, privately read local bootstrap credentials, and used browser UI without source, documentation, API, network, or console inspection. Builders fixed reported failures; later passes rechecked them.",
+    "rounds": [
+      {
+        "round": 1,
+        "scope": "Fresh isolated runtime",
+        "result": "Completed setup, workspaces, four roles, task/chat/source/prompt and actual response after form, viewport and navigation repairs. Exposed later sharing, safety display and clipboard issues."
+      },
+      {
+        "round": 2,
+        "scope": "Second fresh isolated runtime, 1280x720",
+        "result": "Completed actual incident approval, safe restart checks and resolution; scoped sharing, engineer writes, persisted hours, recorded replay, minimal marketing resolution, and unrelated-action exclusion. Clipboard copy failed; immediate-save interaction race remained."
+      },
+      {
+        "round": 3,
+        "scope": "Main saved runtime, 1280x720",
+        "result": "Confirmed setup, ordinary chat/caret/persistence, four logins, active marketing notice, live model and recorded replay. Exposed new-node camera race, sign-out resurrection and pending actions under accumulated same-origin streams. Did not complete execution/resolution in this pass."
+      },
+      {
+        "round": 4,
+        "scope": "Main saved runtime, actual 1280x720 and 1440x900",
+        "result": "Completed setup, collaboration, real prompt copy/paste, session lifecycle, actual approved response and resolution, minimal live notices, unrelated incident exclusion, latest visual explanations and eight-tab stress. Temporary stress tabs closed; four role handoff tabs retained; viewport overrides reset."
+      }
+    ],
+    "latestVerified": [
+      "New system immediately remains selected and visible; edit and connection creation work. Earlier pass verified connection rename and deletion.",
+      "Saved workspaces remain separate from incidents; ordinary conversation and caret insertion survive reload.",
+      "Four real independent accounts; sign-out remains signed out under incoming activity and new login cannot restore old identity.",
+      "Task creation, status update, assignment notice on untouched map, and live responder chat.",
+      "Hours and preference persist; effective availability can remain Off hours.",
+      "Source preview and Back. Copy prompt and Select text plus keyboard-copy each produced actual successful paste into an unsent composer; draft cleared.",
+      "Real current-target preparation, authorized approval, observed unsafe route disabled, wrong customer denied, valid customer accepted, and verified resolution.",
+      "Marketing sees newest minimal notice without navigation, dismissal persists, and private incidents stay absent.",
+      "Unrelated incident has no configured automatic restart action.",
+      "Readable exact incident focus, prominent server-derived outcome, follow-up task explanation, recorded-only replay and restricted-list wording.",
+      "Eight simultaneously signed-in tabs remained usable; pending saves, messages and login completed without the earlier indefinite freeze."
+    ],
+    "model": {
+      "provider": "Brev / vLLM",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+      "liveBrowserRunsObserved": true,
+      "latestLiveCompletedChecks": 2,
+      "ruleBasedFallbackAlsoObserved": true,
+      "fallbackCauseRecovered": false,
+      "note": "One final-pass run honestly used fallback; a subsequent UI run used live Brev with observed scoped checks. Later revisions removed cached analysis. Health HTTP200 alone is not counted as live inference proof."
+    },
+    "screenshots": [
+      {
+        "path": "rebuild/eight-tabs-save.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "39a61bf3230322eda81706dda68b839c2659adba62a55ae3b9127e1110c7f42e"
+      },
+      {
+        "path": "rebuild/focused-verified-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "4b7a4f46030073923ec2165a6023dd273acce35d8368509af1f3d3c5eed9f153"
+      },
+      {
+        "path": "rebuild/focused-verified-1440x900.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "24aa599bfe80b08451c1b5ebb2c38552d244ce5ce8ca62523141a36e3e8200bc"
+      },
+      {
+        "path": "rebuild/focused-verified-map-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "ad78a5b1b669c8fe307e0c518e34951a739c79e91fa13f7603f343d9a6d71946"
+      },
+      {
+        "path": "rebuild/handoff-manager.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "d152001264f59e8df0512711e51ab3b52f3b5c49419048862c2c41a4590ab965"
+      },
+      {
+        "path": "rebuild/live-analysis-1440.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "c575f4699d983bfd74a8bbf9dbbc63aefc7b6e5293228b923287c3c70071b597"
+      },
+      {
+        "path": "rebuild/marketing-active-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "c193a60ecc59038fcebe67dc285e6f7fbc1ada71d201f81ff7805831db48ad62"
+      },
+      {
+        "path": "rebuild/marketing-resolved-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "9d6cae5bcf630dc48281992c8f59a5300cb6d529658e239e761fcfb3c6d9d63e"
+      },
+      {
+        "path": "rebuild/marketing-visibility-1440x900.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "b585bcb934e60bae3d1cddb8d383410d62f06edb422b43063a61c0c0b8bfa761"
+      },
+      {
+        "path": "rebuild/node-created-1280.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "0dc6bae077ec77f192ad3f20c4ed452d6d855c009f4835f45851ce570bd8d58f"
+      },
+      {
+        "path": "rebuild/ordinary-no-action-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "7f74f9e0fdf4f55aea3e41bb1d80185f307048f1c7ff1c3f2780dd21b39581e0"
+      },
+      {
+        "path": "rebuild/replay-paused-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "83257918ce915ae0da8c9cbcaa6f06fb6a037c939800a1a97183ab1d683cdcd2"
+      },
+      {
+        "path": "rebuild/resolution-actions-1440x900.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "aeb89eb6e9790de4bf8d92b6284b36b5132ac55a02830227f547aa1ab36c739f"
+      },
+      {
+        "path": "rebuild/resolved-actions-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "5697a21ce69d9be5669435febbc54055ca66193b9e7b0fbd2af0a8c1bd5caf3e"
+      },
+      {
+        "path": "rebuild/resolved-followups-1440x900.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "416565cb79b2639ac0db64206d224dc1f8493e584645c4cc36045546794591f6"
+      },
+      {
+        "path": "rebuild/responder-progress-1280x720.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "a9f080540a54c767beadfb3876fb65b0abb3f3ab1257991475e0d1ad55045837"
+      },
+      {
+        "path": "rebuild/unrelated-action-gating-1440x900.png",
+        "width": 65536,
+        "height": 4292542531,
+        "sha256": "b2b63ce70b3aa600dcbe79ad951d006dd448fa4fec40992cf898ef144609ac45"
+      }
+    ],
+    "leadFollowup": {
+      "verified": [
+        "Resolved Overview shows only original observation, without the generated containment UUID suffix; stored evidence remains intact.",
+        "Singular node/connection labels checked in actual restricted view.",
+        "Four real separate main-chat sign-ins prepared after child review: manager focused verified map, engineer tasks, data-manager conversation, marketing restricted map.",
+        "Read-only source review of latest session and stream changes found no actionable issue."
+      ],
+      "finalTabCount": 4,
+      "temporaryViewportOverridesReset": true,
+      "leadArrangedSavedWorkspaceViaRealMcp": true
+    }
+  },
+  "sourceReview": {
+    "reviewer": "Dedicated independent GPT-6 Astra security reviewer",
+    "result": "No actionable issue found in bounded read-only review of role-plus-grant administration, scoped reads/writes, incident sharing/revocation, conversations, response authority, client session epochs and stream cleanup.",
+    "assurance": "Not a comprehensive audit or security certification."
+  },
+  "limitations": [
+    "Desktop presentation scope; no mobile acceptance claim.",
+    "Whole-company Fit is an overview; focused workspaces/maps are the readable presentation views.",
+    "Plaintext synthetic SQLite storage, local password accounts, no deployed Supabase/SSO or production connectors.",
+    "Company containment disables one fixed local restart route; it does not repair source code, isolate a host or change production routing.",
+    "The prebuilt protected restart path is independently checked; no model can approve or execute infrastructure changes.",
+    "Normal product chat uses authenticated local server streams, separate from the retained encrypted three-peer protocol on one Mac. No physical radio-mesh claim.",
+    "With excessive HTTP/1 tabs, requests may wait for ten-second stream renewal; permanent starvation was addressed, not unlimited-tab performance.",
+    "Model/SSH/internet availability is not guaranteed. Backup remains visibly labeled. Analysis, brief and import preview caches are memory-only and scope/revision changes invalidate them.",
+    "Final browser round did not upload a company import or repeat employee deletion/connection deletion. Earlier browser passes and existing import/HTTP checks supply the narrower evidence.",
+    "After-hours coverage is a manual eligibility check, without deployed pager, SMS/email/push delivery or autonomous escalation daemon."
+  ],
+  "research": [
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events",
+      "supports": "HTTP/1 same-origin SSE browser connection limit; informed bounded stream renewal."
+    }
+  ],
+  "sourceFileSha256": {
+    "AGENTS.md": "fa7012382409d04cfa5358496ece648acde2133653d89e7804dcd99683b63c07",
+    "PRD.md": "6f3bfcd5da936626ce94e67c41c5c5591111499be18bf19cfc1985290d63d6eb",
+    "README.md": "ece34999b6645b38b885e271eb2fc1fae74df90d3b6c7c349c72e26af1628d6e",
+    "apps/tether/canvas-layout.test.ts": "7f73f4cbb760bbe735883d6bc32c0a71abb5ee8eefab979093318277948dffaa",
+    "apps/tether/company.test.ts": "7ce486c0cda9bc9745c4185eba2fed58c2a7026638f2e00302a836934e147557",
+    "apps/tether/company.ts": "0a54d5b9d4c33c3fe774980972a0f9a366917b3f76173c5e1ffeef22ce0dc9a7",
+    "apps/tether/layout-mcp.test.ts": "ddd02771e6e7e3327a75dc984b97dce28231c5a902b3cb8958c51b019e4b46e5",
+    "apps/tether/layout-mcp.ts": "73bbef35a29a1d26864634de97ef634a37f94438493e64417c8d96813c0c1093",
+    "apps/tether/permissions.test.ts": "35c6450600d962a1f512220aaec5799952ea113f92a048ecbdf4e508a0c2f8e5",
+    "apps/tether/permissions.ts": "f020ddd2036b534e0f5614713473db2d9af2ba0cda0338a4a728c4b705501606",
+    "apps/tether/projection.test.ts": "dd5ce70c64670c3456585d88cddb0ff5334813c071743264376aed325164584a",
+    "apps/tether/public/api.js": "d939943c2f5b0843207fe05842d282f3162769279422bf26fa45c6be58e172c3",
+    "apps/tether/public/app.js": "0c092bc4d39bec55220e0fd77f1468d04307ee45c1e8e84bb05dc6430cdc5aaa",
+    "apps/tether/public/canvas-layout.d.ts": "d6429d2738c8a859d67e333c87fd69d017d8868731f3849e530d0ed9640404e1",
+    "apps/tether/public/canvas-layout.js": "353725ea1dfdf0fd2a0d2b7bab2e8fca1d328f86f08f2ccf0f56b0c96fd52523",
+    "apps/tether/public/canvas.css": "07f7c7c228e343318baf277be12356c71c6bb9b725f4c2167e402fecc8898f53",
+    "apps/tether/public/canvas.js": "d998b49468e7cd7db70fc29638b923fbae23eee17dbcd769897a0055ca183ca4",
+    "apps/tether/public/panels.js": "c9282114462f45a055b08f00a60e63eaaa61dc1a6f4ad4a41a42f7ab497f36cf",
+    "apps/tether/public/styles.css": "be51f5918ff9d0e93810b5a2d52c6718e1be742c9fd35447d37608eebff4951b",
+    "apps/tether/scheduling.test.ts": "d177d01ed9decbc6cca146ffa968648bc445741c4640d1fe0996669e2dfd9238",
+    "apps/tether/scheduling.ts": "34d0f982233375d2a807fc911f79238e8cfa7933210db4281ad8fa67379aaab7",
+    "apps/tether/seed.ts": "fde57d92ff2a72299eb39b5221bfd51b13b8c3f8a5c48c16d6d740d6b3419012",
+    "apps/tether/server.test.ts": "09d8336c85472592a615e2daad5e4afd6dd1eae2d92dccf3682d33ef1e18e3bd",
+    "apps/tether/server.ts": "dadd2b6fffaf8ed61d2b832bf329ad8c45641f4d3a0b9325ce3b9d16bbeb49f2",
+    "apps/tether/stream.test.ts": "d5f231fd1fea01025c1c2e5ad285db0dc3e6d68d7c547be421a3b0cc9803474c",
+    "apps/tether/types.ts": "69396d0d98e49ec404fb85b53ff85f4704ed27b9c7c1c93860fe370373675584",
+    "docs/TETHER-REBUILD-CONTRACT.md": "e1f77a934da3471e4da52d82f42457850729004fcbb9d3460525e7f50b899a92",
+    "docs/TETHER-RUNBOOK.md": "89b09040e725c422de50760686aba3cbf721c668f81e64971fed326f464a958b",
+    "scripts/brev-forward.sh": "165c80f6cc6eb554afd4b478e3ed7e48f1d4c3df0a4a06ae677f7c0439a2896d"
+  }
+}

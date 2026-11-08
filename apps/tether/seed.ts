@@ -600,12 +600,54 @@ const nodeSpecs: Array<
   ],
 ];
 
+// Only exact original seed copy is migrated; customized company names are preserved.
+export const seedCopyUpdates: Record<
+  string,
+  { name?: [string, string]; description?: [string, string] }
+> = {
+  "tenant-auth": {
+    name: ["Tenant Authorization", "Customer Access Checks"],
+    description: [
+      "Binds authenticated tenants to job ownership",
+      "Checks that each customer can access only their own jobs",
+    ],
+  },
+  "retry-route": {
+    name: ["Job Retry Route", "Job Retry Endpoint"],
+    description: [
+      "POST /api/v1/jobs/:jobId/retry",
+      "Lets customers retry a job after a failed attempt",
+    ],
+  },
+  "training-dispatch": {
+    name: ["DFW Training Dispatch", "Dallas Training Queue"],
+    description: [
+      "Routes approved training jobs to DFW capacity",
+      "Sends approved training jobs to available Dallas workers",
+    ],
+  },
+  "dfw-worker-pool": { name: ["DFW GPU Worker Pool", "Dallas GPU Workers"] },
+  "iad-worker-pool": { name: ["IAD GPU Worker Pool", "Virginia GPU Workers"] },
+  "training-systems-team": {
+    description: [
+      "Owns dataset and training continuity",
+      "Maintains datasets and keeps training jobs running",
+    ],
+  },
+  "priya-node": {
+    description: [
+      "Manager for data science continuity",
+      "Manages the data science team",
+    ],
+  },
+};
+
 export function seedNodes(): CompanyNode[] {
   return nodeSpecs.map((n, i) => ({
     id: n[0],
-    name: n[1],
+    name: seedCopyUpdates[n[0]]?.name?.[1] ?? n[1],
     kind: n[2],
-    description: n[3],
+    description: seedCopyUpdates[n[0]]?.description?.[1] ?? n[3],
     regionId: n[4],
     ownerId: n[5],
     criticality: n[6],

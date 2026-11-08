@@ -12,6 +12,7 @@ import type {
 } from "../../packages/contracts/src/index.ts";
 import {
   departments,
+  seedCopyUpdates,
   seedEdges,
   seedGrants,
   seedMembers,
@@ -19,6 +20,8 @@ import {
   seedRepositories,
 } from "./seed.ts";
 import type {
+  Workspace,
+  ConversationMessage,
   CompanyEdge,
   CompanyEvent,
   CompanyNode,
@@ -32,6 +35,7 @@ import type {
   RepositoryReference,
   ResourceGrant,
 } from "./types.ts";
+import { roleTemplate } from "./permissions.ts";
 import type {
   Capability,
   MembershipSnapshot,
@@ -51,6 +55,8 @@ export class CompanyError extends Error {
 }
 
 type RecordKind =
+  | "workspace"
+  | "conversation"
   | "member"
   | "node"
   | "edge"
@@ -96,6 +102,7 @@ export class TetherCompanyStore {
       CREATE TABLE IF NOT EXISTS tether_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,resource_type TEXT NOT NULL,resource_id TEXT NOT NULL,member_ids TEXT NOT NULL,created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS message_dedup(incident_id TEXT NOT NULL,author_id TEXT NOT NULL,idempotency_key TEXT NOT NULL,message_id TEXT NOT NULL,PRIMARY KEY(incident_id,author_id,idempotency_key));
       CREATE TABLE IF NOT EXISTS incident_dedup(creator_id TEXT NOT NULL,idempotency_key TEXT NOT NULL,incident_id TEXT NOT NULL,PRIMARY KEY(creator_id,idempotency_key));
+      CREATE TABLE IF NOT EXISTS conversation_dedup(scope_id TEXT NOT NULL,author_id TEXT NOT NULL,idempotency_key TEXT NOT NULL,message_id TEXT NOT NULL,PRIMARY KEY(scope_id,author_id,idempotency_key));
       CREATE INDEX IF NOT EXISTS tether_events_resource_idx ON tether_events(resource_type,resource_id,cursor);
     `);
     this.#db
@@ -111,8 +118,29 @@ export class TetherCompanyStore {
       ).count === 0
     )
       this.#seed();
+    for (const node of this.#list<CompanyNode>("node")) {
+      const copy = seedCopyUpdates[node.id];
+      if (!copy) continue;
+      const name =
+        copy.name && node.name === copy.name[0] ? copy.name[1] : node.name;
+      const description =
+        copy.description && node.description === copy.description[0]
+          ? copy.description[1]
+          : node.description;
+      if (name !== node.name || description !== node.description)
+        this.updateNode(node.id, node.semanticRevision, { name, description });
+    }
     this.#migrateMemberRoles();
     this.#migrateSeedRepositories();
+    this.#seedNormalWorkspaces();
+    for (const incident of this.#list<Incident>("incident"))
+      if (!incident.priority)
+        this.#put(
+          "incident",
+          incident.id,
+          { ...incident, priority: "high" },
+          incident.revision,
+        );
   }
 
   close(): void {
@@ -203,6 +231,14 @@ export class TetherCompanyStore {
     }
   }
   #migrateSeedRepositories(): void {
+    if (
+      this.#db
+        .prepare(
+          "SELECT value FROM tether_meta WHERE key='seed_repositories_v2'",
+        )
+        .get()
+    )
+      return;
     for (const repository of seedRepositories)
       if (
         !this.#get("repository", repository.id) &&
@@ -214,6 +250,96 @@ export class TetherCompanyStore {
           repository,
           repository.revisionNumber,
         );
+    this.#db
+      .prepare(
+        "INSERT INTO tether_meta(key,value) VALUES('seed_repositories_v2',1)",
+      )
+      .run();
+  }
+
+  #seedNormalWorkspaces(): void {
+    if (
+      this.#db
+        .prepare(
+          "SELECT value FROM tether_meta WHERE key='normal_workspaces_v1'",
+        )
+        .get()
+    )
+      return;
+    this.#transaction(() => {
+      if (!this.#list<Workspace>("workspace").length) {
+        const timestamp = now();
+        const definitions = [
+          {
+            id: "workspace-job-requests",
+            name: "Job requests",
+            nodeIds: [
+              "job-api",
+              "tenant-auth",
+              "retry-route",
+              "retry-queue",
+              "job-state-db",
+              "customer-console",
+              "customer-dashboard",
+            ],
+            memberIds: ["employee-ava", "employee-noah"],
+          },
+          {
+            id: "workspace-model-training",
+            name: "Model training",
+            nodeIds: [
+              "dataset-upload",
+              "dataset-validation",
+              "training-catalog",
+              "training-dispatch",
+              "model-registry",
+              "model-delivery",
+              "dfw-cache",
+              "dfw-checkpoint",
+              "queue-priority",
+              "release-gate",
+            ],
+            memberIds: ["employee-ava", "employee-priya"],
+          },
+          {
+            id: "workspace-data-center",
+            name: "Data center operations",
+            nodeIds: [
+              "scheduler",
+              "dfw-worker-pool",
+              "iad-worker-pool",
+              "dfw-network",
+              "iad-network",
+              "capacity-reporting",
+              "results-storage",
+              "object-store",
+            ],
+            memberIds: ["employee-ava", "employee-noah", "employee-priya"],
+          },
+        ];
+        for (const definition of definitions) {
+          const workspace: Workspace = {
+            ...definition,
+            nodeIds: definition.nodeIds.filter((id) =>
+              Boolean(this.#get("node", id)),
+            ),
+            memberIds: definition.memberIds.filter((id) =>
+              Boolean(this.member(id)?.active),
+            ),
+            createdBy: "employee-ava",
+            revision: 1,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+          this.#put("workspace", workspace.id, workspace, 1);
+        }
+      }
+      this.#db
+        .prepare(
+          "INSERT INTO tether_meta(key,value) VALUES('normal_workspaces_v1',1)",
+        )
+        .run();
+    });
   }
 
   #put(kind: RecordKind, id: string, value: unknown, revision: number): void {
@@ -304,6 +430,19 @@ export class TetherCompanyStore {
   grantsFor(id: string): ResourceGrant[] {
     return this.#list<ResourceGrant>("grant").filter((g) => g.memberId === id);
   }
+  isOrganizationAdmin(id: string): boolean {
+    const member = this.member(id);
+    return Boolean(
+      member?.active &&
+      member.roleTemplate === "senior_manager" &&
+      this.grantsFor(id).some(
+        (grant) =>
+          grant.resourceType === "organization" &&
+          grant.resourceId === "northstar" &&
+          grant.capabilities.includes("admin"),
+      ),
+    );
+  }
   membershipSnapshot(id: string): MembershipSnapshot | undefined {
     const member = this.member(id);
     if (!member) return undefined;
@@ -324,14 +463,9 @@ export class TetherCompanyStore {
     capability?: Capability,
   ): PermissionGrant[] {
     const membership = this.membershipSnapshot(id);
-    if (!membership) return [];
+    if (!membership?.active) return [];
     const stored = this.grantsFor(id),
-      organizationAdmin = stored.some(
-        (grant) =>
-          grant.resourceType === "organization" &&
-          grant.resourceId === "northstar" &&
-          grant.capabilities.includes("admin"),
-      ),
+      organizationAdmin = this.isOrganizationAdmin(id),
       jobPlatform = stored.some(
         (grant) =>
           grant.resourceType === "region" &&
@@ -375,9 +509,12 @@ export class TetherCompanyStore {
           "notice:read",
         ],
       });
+    const canOwnGraph =
+      membership.active &&
+      ["engineer", "data_science_manager"].includes(membership.role);
     const nodeAccess = (node: CompanyNode) =>
       organizationAdmin ||
-      (node.ownerId === id && (jobPlatform || training)) ||
+      (node.ownerId === id && (jobPlatform || training || canOwnGraph)) ||
       (jobPlatform &&
         [
           "job-api",
@@ -397,15 +534,33 @@ export class TetherCompanyStore {
           "queue-priority",
         ].includes(node.id)) ||
       (marketing && node.id === "status-page");
+    const sharedNodeIds = new Set(
+      stored
+        .filter((grant) => {
+          if (
+            grant.resourceType !== "node" ||
+            !grant.incidentId ||
+            !grant.capabilities.includes("graph:read") ||
+            !roleTemplate(membership.role).has("graph:read")
+          )
+            return false;
+          const incident = this.#get<Incident>("incident", grant.incidentId);
+          return Boolean(
+            incident?.memberIds.includes(id) &&
+            incident.nodeIds.includes(grant.resourceId),
+          );
+        })
+        .map((grant) => grant.resourceId),
+    );
     for (const node of this.#list<CompanyNode>("node"))
-      if (nodeAccess(node))
+      if (nodeAccess(node) || sharedNodeIds.has(node.id))
         resources.push({
           kind: "node",
           id: node.id,
           capabilities: [
             "graph:read",
             ...((organizationAdmin || node.ownerId === id) &&
-            (jobPlatform || training || organizationAdmin)
+            (jobPlatform || training || organizationAdmin || canOwnGraph)
               ? ["graph:write" as Capability]
               : []),
           ],
@@ -525,6 +680,10 @@ export class TetherCompanyStore {
       ],
       repositories: this.#list("repository"),
       incidents: this.#list("incident"),
+      workspaces: this.#list("workspace"),
+      conversations: this.#list<ConversationMessage>("conversation").sort(
+        (a, b) => a.sequence - b.sequence,
+      ),
       tasks: this.#list("task"),
       messages: this.#list<Message>("message").sort(
         (a, b) => a.sequence - b.sequence,
@@ -539,6 +698,14 @@ export class TetherCompanyStore {
   addMember(input: Omit<Member, "revision">): Member {
     if (this.#get("member", input.id))
       throw new CompanyError("duplicate", "member already exists", 409);
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: input.timezone }).format();
+    } catch {
+      throw new CompanyError(
+        "invalid_timezone",
+        "timezone must be an IANA timezone",
+      );
+    }
     const member = {
       ...input,
       id: clean(input.id, "id", 100),
@@ -612,17 +779,84 @@ export class TetherCompanyStore {
       );
     if (
       patch.workingHours &&
-      (patch.workingHours.length > 14 ||
+      (!Array.isArray(patch.workingHours) ||
+        patch.workingHours.length > 14 ||
         patch.workingHours.some(
           (item) =>
             !Number.isInteger(item.weekday) ||
             item.weekday < 0 ||
             item.weekday > 6 ||
-            !/^\d{2}:\d{2}$/.test(item.start) ||
-            !/^\d{2}:\d{2}$/.test(item.end),
+            !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.start) ||
+            !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.end),
         ))
     )
       throw new CompanyError("invalid_hours", "working hours are invalid");
+    if (
+      patch.availability !== undefined &&
+      ![
+        "available",
+        "focused",
+        "meeting",
+        "away",
+        "off_hours",
+        "on_call",
+      ].includes(patch.availability)
+    )
+      throw new CompanyError(
+        "invalid_availability",
+        "invalid availability setting",
+      );
+    if (
+      patch.availabilityUntil &&
+      !Number.isFinite(Date.parse(patch.availabilityUntil))
+    )
+      throw new CompanyError(
+        "invalid_availability",
+        "availability expiry is invalid",
+      );
+    const validWindow = (window: { startsAt: string; endsAt: string }) =>
+      window &&
+      Number.isFinite(Date.parse(window.startsAt)) &&
+      Number.isFinite(Date.parse(window.endsAt)) &&
+      Date.parse(window.startsAt) < Date.parse(window.endsAt);
+    if (
+      patch.leave &&
+      (!validWindow(patch.leave) ||
+        typeof patch.leave.reason !== "string" ||
+        patch.leave.reason.length > 500)
+    )
+      throw new CompanyError(
+        "invalid_leave",
+        "leave dates or reason are invalid",
+      );
+    if (
+      patch.onCallWindows &&
+      (!Array.isArray(patch.onCallWindows) ||
+        patch.onCallWindows.length > 30 ||
+        patch.onCallWindows.some(
+          (window) =>
+            !validWindow(window) || typeof window.accepted !== "boolean",
+        ))
+    )
+      throw new CompanyError("invalid_on_call", "on-call windows are invalid");
+    if (
+      patch.notifications &&
+      (typeof patch.notifications.routineInHours !== "boolean" ||
+        typeof patch.notifications.afterHours !== "boolean" ||
+        !Array.isArray(patch.notifications.channels) ||
+        patch.notifications.channels.some(
+          (channel) => !["in_app", "email"].includes(channel),
+        ) ||
+        !Array.isArray(patch.notifications.severities) ||
+        patch.notifications.severities.some(
+          (severity) =>
+            !["low", "medium", "high", "critical"].includes(severity),
+        ))
+    )
+      throw new CompanyError(
+        "invalid_preferences",
+        "notification preferences are invalid",
+      );
     const updated = {
       ...current,
       ...patch,
@@ -633,7 +867,14 @@ export class TetherCompanyStore {
     };
     this.#transaction(() => {
       this.#put("member", id, updated, updated.revision);
-      this.#emit("member.updated", "member", id, [id, "employee-ava"]);
+      this.#emit(
+        "member.updated",
+        "member",
+        id,
+        this.#list<Member>("member")
+          .filter((member) => member.active)
+          .map((member) => member.id),
+      );
     });
     return updated;
   }
@@ -660,6 +901,14 @@ export class TetherCompanyStore {
         "invalid_input",
         "node kind or criticality is invalid",
       );
+    if (input.ownerId && !this.member(input.ownerId)?.active)
+      throw new CompanyError("invalid_reference", "node owner is invalid");
+    if (
+      ![input.x, input.y].every(
+        (value) => Number.isFinite(value) && Math.abs(value) <= 1_000_000,
+      )
+    )
+      throw new CompanyError("invalid_input", "coordinates are outside bounds");
     const node = {
       ...input,
       id,
@@ -693,6 +942,41 @@ export class TetherCompanyStore {
         "node semantics changed since it was loaded",
         409,
       );
+    if (
+      Object.keys(patch).some(
+        (key) =>
+          ![
+            "name",
+            "kind",
+            "description",
+            "regionId",
+            "ownerId",
+            "criticality",
+            "status",
+          ].includes(key),
+      )
+    )
+      throw new CompanyError("invalid_input", "unsupported node field");
+    const candidate = { ...current, ...patch };
+    if (
+      ![
+        "service",
+        "component",
+        "workflow",
+        "dataset",
+        "resource",
+        "team",
+        "person",
+      ].includes(candidate.kind) ||
+      !["low", "medium", "high", "critical"].includes(candidate.criticality) ||
+      !["healthy", "degraded", "unknown"].includes(candidate.status)
+    )
+      throw new CompanyError("invalid_input", "invalid node properties");
+    if (candidate.ownerId && !this.member(candidate.ownerId)?.active)
+      throw new CompanyError("invalid_reference", "node owner is invalid");
+    clean(candidate.name, "name", 160);
+    clean(candidate.description, "description", 1000);
+    clean(candidate.regionId, "regionId", 100);
     const updated = {
       ...current,
       ...patch,
@@ -751,6 +1035,66 @@ export class TetherCompanyStore {
     });
     return updated;
   }
+  updateNodeLayouts(
+    positions: Array<{
+      id: string;
+      x: number;
+      y: number;
+      layoutRevision: number;
+    }>,
+    allowedIds: Set<string>,
+  ): void {
+    if (
+      positions.length !== allowedIds.size ||
+      new Set(positions.map((position) => position.id)).size !==
+        positions.length
+    )
+      throw new CompanyError(
+        "invalid_input",
+        "layout must include each selected node once",
+      );
+    const updates = positions.map((position) => {
+      const current = this.#get<CompanyNode>("node", position.id);
+      if (!allowedIds.has(position.id) || !current)
+        throw new CompanyError(
+          "invalid_scope",
+          "layout node is outside selected scope",
+        );
+      if (current.layoutRevision !== position.layoutRevision)
+        throw new CompanyError(
+          "revision_conflict",
+          "node layout changed since it was loaded",
+          409,
+        );
+      if (
+        ![position.x, position.y].every(
+          (value) => Number.isFinite(value) && Math.abs(value) <= 1_000_000,
+        )
+      )
+        throw new CompanyError(
+          "invalid_input",
+          "coordinates are outside bounds",
+        );
+      return {
+        ...current,
+        x: position.x,
+        y: position.y,
+        layoutRevision: current.layoutRevision + 1,
+      };
+    });
+    this.#transaction(() => {
+      for (const node of updates) {
+        this.#put("node", node.id, node, node.semanticRevision);
+        this.#emit(
+          "node.layout",
+          "node",
+          node.id,
+          this.#visibleMembersForNode(node),
+        );
+      }
+    });
+  }
+
   deleteNode(id: string, expectedSemanticRevision: number): void {
     const current = this.#get<CompanyNode>("node", id);
     if (!current) throw new CompanyError("not_found", "node not found", 404);
@@ -768,6 +1112,18 @@ export class TetherCompanyStore {
       throw new CompanyError(
         "node_in_use",
         "remove connected dependency edges before deleting the node",
+        409,
+      );
+    const state = this.allState();
+    if (
+      state.workspaces.some((workspace) => workspace.nodeIds.includes(id)) ||
+      state.repositories.some((ref) => ref.nodeId === id) ||
+      state.incidents.some((incident) => incident.nodeIds.includes(id)) ||
+      state.tasks.some((task) => task.nodeIds.includes(id))
+    )
+      throw new CompanyError(
+        "node_in_use",
+        "remove this node from repository links, incidents, and tasks before deleting it",
         409,
       );
     this.#transaction(() => {
@@ -794,6 +1150,21 @@ export class TetherCompanyStore {
         "invalid_reference",
         "edge endpoint does not exist",
       );
+    if (
+      ![
+        "depends_on",
+        "authorizes",
+        "feeds",
+        "stores_in",
+        "operated_by",
+        "delivers_to",
+      ].includes(input.kind) ||
+      typeof input.optional !== "boolean"
+    )
+      throw new CompanyError(
+        "invalid_input",
+        "invalid edge kind or optional setting",
+      );
     const edge = {
       ...input,
       id: clean(input.id, "id", 140),
@@ -811,6 +1182,64 @@ export class TetherCompanyStore {
     });
     return edge;
   }
+  updateEdge(
+    id: string,
+    expectedRevision: number,
+    patch: Partial<Pick<CompanyEdge, "kind" | "label" | "optional">>,
+  ): CompanyEdge {
+    const current = this.#get<CompanyEdge>("edge", id);
+    if (!current) throw new CompanyError("not_found", "edge not found", 404);
+    if (current.revision !== expectedRevision)
+      throw new CompanyError(
+        "revision_conflict",
+        "edge changed since it was loaded",
+        409,
+      );
+    if (
+      Object.keys(patch).some(
+        (key) => !["kind", "label", "optional"].includes(key),
+      )
+    )
+      throw new CompanyError("invalid_input", "unsupported edge field");
+    const updated = {
+      ...current,
+      ...patch,
+      label:
+        patch.label === undefined
+          ? current.label
+          : clean(patch.label, "label", 120),
+      revision: current.revision + 1,
+    };
+    if (
+      ![
+        "depends_on",
+        "authorizes",
+        "feeds",
+        "stores_in",
+        "operated_by",
+        "delivers_to",
+      ].includes(updated.kind) ||
+      typeof updated.optional !== "boolean"
+    )
+      throw new CompanyError(
+        "invalid_input",
+        "invalid edge kind or optional setting",
+      );
+    this.#transaction(() => {
+      this.#put("edge", id, updated, updated.revision);
+      this.#bumpSemantic();
+      this.#emit(
+        "edge.updated",
+        "edge",
+        id,
+        this.#visibleMembersForNode(
+          this.#get<CompanyNode>("node", current.sourceId)!,
+        ),
+      );
+    });
+    return updated;
+  }
+
   deleteEdge(id: string, expectedRevision: number): void {
     const edge = this.#get<CompanyEdge>("edge", id);
     if (!edge) throw new CompanyError("not_found", "edge not found", 404);
@@ -928,9 +1357,190 @@ export class TetherCompanyStore {
     });
   }
 
+  createWorkspace(input: {
+    name: string;
+    nodeIds: string[];
+    memberIds: string[];
+    createdBy: string;
+  }): Workspace {
+    const timestamp = now();
+    const workspace: Workspace = {
+      id: `workspace-${randomUUID()}`,
+      name: clean(input.name, "name", 180),
+      nodeIds: [...new Set(input.nodeIds)],
+      memberIds: [...new Set(input.memberIds)],
+      createdBy: input.createdBy,
+      revision: 1,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    this.#validateWorkspace(workspace);
+    this.#transaction(() => {
+      this.#put("workspace", workspace.id, workspace, 1);
+      this.#emit("workspace.created", "workspace", workspace.id, [
+        ...workspace.memberIds,
+        input.createdBy,
+      ]);
+    });
+    return workspace;
+  }
+  #validateWorkspace(workspace: Workspace): void {
+    if (
+      workspace.nodeIds.length > 100 ||
+      workspace.memberIds.length > 100 ||
+      workspace.nodeIds.some((id) => !this.#get("node", id)) ||
+      workspace.memberIds.some((id) => !this.member(id)?.active)
+    )
+      throw new CompanyError(
+        "invalid_scope",
+        "workspace nodes or members are invalid",
+      );
+  }
+  updateWorkspace(
+    id: string,
+    revision: number,
+    patch: Partial<Pick<Workspace, "name" | "nodeIds" | "memberIds">>,
+  ): Workspace {
+    const current = this.#get<Workspace>("workspace", id);
+    if (!current)
+      throw new CompanyError("not_found", "workspace not found", 404);
+    if (current.revision !== revision)
+      throw new CompanyError(
+        "revision_conflict",
+        "workspace changed since it was loaded",
+        409,
+      );
+    const updated = {
+      ...current,
+      name:
+        patch.name === undefined
+          ? current.name
+          : clean(patch.name, "name", 180),
+      nodeIds: [...new Set(patch.nodeIds ?? current.nodeIds)],
+      memberIds: [...new Set(patch.memberIds ?? current.memberIds)],
+      revision: current.revision + 1,
+      updatedAt: now(),
+    };
+    this.#validateWorkspace(updated);
+    this.#transaction(() => {
+      this.#put("workspace", id, updated, updated.revision);
+      this.#emit("workspace.updated", "workspace", id, [
+        ...current.memberIds,
+        ...updated.memberIds,
+        current.createdBy,
+      ]);
+    });
+    return updated;
+  }
+  deleteWorkspace(id: string, revision: number): void {
+    const current = this.#get<Workspace>("workspace", id);
+    if (!current)
+      throw new CompanyError("not_found", "workspace not found", 404);
+    if (current.revision !== revision)
+      throw new CompanyError(
+        "revision_conflict",
+        "workspace changed since it was loaded",
+        409,
+      );
+    this.#transaction(() => {
+      this.#db
+        .prepare("DELETE FROM tether_records WHERE kind='workspace' AND id=?")
+        .run(id);
+      this.#db
+        .prepare(
+          "DELETE FROM tether_records WHERE kind='conversation' AND json_extract(json,'$.workspaceId')=?",
+        )
+        .run(id);
+      this.#db
+        .prepare("DELETE FROM conversation_dedup WHERE scope_id=?")
+        .run(id);
+      this.#emit("workspace.deleted", "workspace", id, [
+        ...current.memberIds,
+        current.createdBy,
+      ]);
+    });
+  }
+  postConversation(input: {
+    scope: "company" | "workspace";
+    workspaceId?: string;
+    authorId: string;
+    text: string;
+    idempotencyKey: string;
+  }): ConversationMessage {
+    const member = this.member(input.authorId);
+    if (!member?.active)
+      throw new CompanyError("forbidden", "active membership required", 403);
+    if (
+      !["company", "workspace"].includes(input.scope) ||
+      (input.scope === "company" && input.workspaceId)
+    )
+      throw new CompanyError("invalid_scope", "invalid conversation scope");
+    const workspace =
+      input.scope === "workspace"
+        ? this.#get<Workspace>("workspace", input.workspaceId ?? "")
+        : undefined;
+    if (
+      input.scope === "workspace" &&
+      (!workspace ||
+        (!workspace.memberIds.includes(input.authorId) &&
+          !this.isOrganizationAdmin(input.authorId)))
+    )
+      throw new CompanyError("forbidden", "workspace access required", 403);
+    const scopeId = workspace?.id ?? "company";
+    const key = clean(input.idempotencyKey, "idempotencyKey", 120);
+    const prior = this.#db
+      .prepare(
+        "SELECT message_id FROM conversation_dedup WHERE scope_id=? AND author_id=? AND idempotency_key=?",
+      )
+      .get(scopeId, input.authorId, key) as { message_id: string } | undefined;
+    if (prior)
+      return this.#get<ConversationMessage>("conversation", prior.message_id)!;
+    const sequence = Number(
+      (
+        this.#db
+          .prepare(
+            "SELECT COALESCE(MAX(revision),0)+1 AS sequence FROM tether_records WHERE kind='conversation'",
+          )
+          .get() as { sequence: number }
+      ).sequence,
+    );
+    const message: ConversationMessage = {
+      id: `conversation-${randomUUID()}`,
+      scope: input.scope,
+      ...(workspace ? { workspaceId: workspace.id } : {}),
+      authorId: input.authorId,
+      text: clean(input.text, "message", 4000),
+      sequence,
+      createdAt: now(),
+    };
+    this.#transaction(() => {
+      this.#put("conversation", message.id, message, sequence);
+      this.#db
+        .prepare("INSERT INTO conversation_dedup VALUES(?,?,?,?)")
+        .run(scopeId, input.authorId, key, message.id);
+      this.#emit(
+        "conversation.created",
+        "conversation",
+        message.id,
+        workspace
+          ? [
+              ...workspace.memberIds,
+              ...this.#list<Member>("member")
+                .filter((m) => this.isOrganizationAdmin(m.id))
+                .map((m) => m.id),
+            ]
+          : this.#list<Member>("member")
+              .filter((m) => m.active)
+              .map((m) => m.id),
+      );
+    });
+    return message;
+  }
+
   createIncident(input: {
     title: string;
     observation: string;
+    priority?: Incident["priority"];
     regionId: string;
     nodeIds: string[];
     memberIds: string[];
@@ -956,11 +1566,17 @@ export class TetherCompanyStore {
     const uniqueMembers = [...new Set([input.commanderId, ...input.memberIds])];
     if (uniqueMembers.some((id) => !this.#get<Member>("member", id)?.active))
       throw new CompanyError("invalid_scope", "incident member is invalid");
+    if (
+      input.priority !== undefined &&
+      !["low", "medium", "high", "critical"].includes(input.priority)
+    )
+      throw new CompanyError("invalid_input", "invalid incident priority");
     const timestamp = now();
     const incident: Incident = {
       id: `incident-${randomUUID()}`,
       title: clean(input.title, "title", 180),
       observation: clean(input.observation, "observation", 2000),
+      priority: input.priority ?? "high",
       status: "open",
       regionId: input.regionId,
       nodeIds: uniqueNodes,
@@ -982,6 +1598,78 @@ export class TetherCompanyStore {
     });
     return incident;
   }
+  shareIncidentSystems(
+    incidentId: string,
+    memberIds: string[],
+    nodeIds: string[],
+  ): {
+    incidentId: string;
+    memberIds: string[];
+    nodeIds: string[];
+    shared: true;
+  } {
+    const incident = this.#get<Incident>("incident", incidentId);
+    if (!incident)
+      throw new CompanyError("not_found", "incident not found", 404);
+    const members = [...new Set(memberIds)],
+      nodes = [...new Set(nodeIds)];
+    if (
+      !members.length ||
+      members.length > 100 ||
+      !nodes.length ||
+      nodes.length > 50 ||
+      members.some((id) => !incident.memberIds.includes(id)) ||
+      nodes.some((id) => !incident.nodeIds.includes(id))
+    )
+      throw new CompanyError(
+        "invalid_scope",
+        "share only systems and responders already in this incident",
+      );
+    if (
+      members.some((id) => {
+        const member = this.member(id);
+        return (
+          !member?.active ||
+          !roleTemplate(member.roleTemplate).has("graph:read")
+        );
+      })
+    )
+      throw new CompanyError(
+        "forbidden",
+        "a selected responder's role cannot read systems",
+        403,
+      );
+    this.#transaction(() => {
+      let changed = false;
+      for (const memberId of members)
+        for (const nodeId of nodes) {
+          const id = `incident-read:${incidentId}:${memberId}:${nodeId}`;
+          if (this.#get("grant", id)) continue;
+          const grant: ResourceGrant = {
+            id,
+            memberId,
+            resourceType: "node",
+            resourceId: nodeId,
+            incidentId,
+            capabilities: ["graph:read"],
+            revision: 1,
+          };
+          this.#put("grant", id, grant, 1);
+          changed = true;
+        }
+      if (changed) {
+        this.#bumpSemantic();
+        this.#emit(
+          "incident.systems_shared",
+          "incident",
+          incidentId,
+          incident.memberIds,
+        );
+      }
+    });
+    return { incidentId, memberIds: members, nodeIds: nodes, shared: true };
+  }
+
   updateIncident(
     id: string,
     expectedRevision: number,
@@ -990,6 +1678,7 @@ export class TetherCompanyStore {
         Incident,
         | "title"
         | "observation"
+        | "priority"
         | "status"
         | "memberIds"
         | "commanderId"
@@ -1005,6 +1694,37 @@ export class TetherCompanyStore {
         "revision_conflict",
         "incident changed since it was loaded",
         409,
+      );
+    if (
+      Object.keys(patch).some(
+        (key) =>
+          ![
+            "title",
+            "observation",
+            "priority",
+            "status",
+            "memberIds",
+            "commanderId",
+            "nodeIds",
+          ].includes(key),
+      )
+    )
+      throw new CompanyError("invalid_input", "unsupported incident field");
+    if (
+      patch.priority !== undefined &&
+      !["low", "medium", "high", "critical"].includes(patch.priority)
+    )
+      throw new CompanyError("invalid_input", "invalid incident priority");
+    if (patch.title !== undefined) clean(patch.title, "title", 180);
+    if (patch.observation !== undefined)
+      clean(patch.observation, "observation", 2000);
+    if (
+      patch.status !== undefined &&
+      !["open", "acknowledged", "investigating"].includes(patch.status)
+    )
+      throw new CompanyError(
+        "invalid_input",
+        "incident resolution requires verified response checks",
       );
     const memberIds = patch.memberIds
         ? [...new Set(patch.memberIds)]
@@ -1033,6 +1753,16 @@ export class TetherCompanyStore {
     };
     this.#transaction(() => {
       this.#put("incident", id, updated, updated.revision);
+      for (const grant of this.#list<ResourceGrant>("grant")) {
+        if (
+          grant.incidentId === id &&
+          (!memberIds.includes(grant.memberId) ||
+            !nodeIds.includes(grant.resourceId))
+        )
+          this.#db
+            .prepare("DELETE FROM tether_records WHERE kind='grant' AND id=?")
+            .run(grant.id);
+      }
       this.#bumpSemantic();
       this.#emit("incident.updated", "incident", id, [
         ...new Set([...current.memberIds, ...memberIds]),
@@ -1198,7 +1928,10 @@ export class TetherCompanyStore {
   }
 
   addRepositoryReference(
-    input: Omit<RepositoryReference, "id" | "revisionNumber">,
+    input: Omit<RepositoryReference, "id" | "revisionNumber"> & {
+      id?: string;
+      revisionNumber?: number;
+    },
   ): RepositoryReference {
     if (!this.#get("node", input.nodeId))
       throw new CompanyError("invalid_reference", "node not found");
@@ -1214,13 +1947,32 @@ export class TetherCompanyStore {
         "invalid_source",
         "source reference is outside the configured repository",
       );
+    const current = input.id
+      ? this.#get<RepositoryReference>("repository", input.id)
+      : undefined;
+    if (input.id && !current)
+      throw new CompanyError("not_found", "repository link not found", 404);
+    if (current && current.revisionNumber !== input.revisionNumber)
+      throw new CompanyError(
+        "revision_conflict",
+        "repository link changed since it was loaded",
+        409,
+      );
+    if (
+      (input.lineStart !== undefined &&
+        (!Number.isSafeInteger(input.lineStart) || input.lineStart < 1)) ||
+      (input.lineEnd !== undefined &&
+        (!Number.isSafeInteger(input.lineEnd) ||
+          input.lineEnd < (input.lineStart ?? 1)))
+    )
+      throw new CompanyError("invalid_source", "invalid source line range");
     const ref: RepositoryReference = {
       ...input,
-      id: `repo-${randomUUID()}`,
-      revisionNumber: 1,
+      id: current?.id ?? `repo-${randomUUID()}`,
+      revisionNumber: (current?.revisionNumber ?? 0) + 1,
     };
     this.#transaction(() => {
-      this.#put("repository", ref.id, ref, 1);
+      this.#put("repository", ref.id, ref, ref.revisionNumber);
       this.#bumpSemantic();
       this.#emit(
         "repository.created",
@@ -1233,6 +1985,32 @@ export class TetherCompanyStore {
     });
     return ref;
   }
+  deleteRepositoryReference(id: string, revisionNumber: number): void {
+    const current = this.#get<RepositoryReference>("repository", id);
+    if (!current)
+      throw new CompanyError("not_found", "repository link not found", 404);
+    if (current.revisionNumber !== revisionNumber)
+      throw new CompanyError(
+        "revision_conflict",
+        "repository link changed since it was loaded",
+        409,
+      );
+    this.#transaction(() => {
+      this.#db
+        .prepare("DELETE FROM tether_records WHERE kind='repository' AND id=?")
+        .run(id);
+      this.#bumpSemantic();
+      this.#emit(
+        "repository.deleted",
+        "repository",
+        id,
+        this.#visibleMembersForNode(
+          this.#get<CompanyNode>("node", current.nodeId)!,
+        ),
+      );
+    });
+  }
+
   readNotification(id: string, memberId: string): Notification {
     const current = this.#get<Notification>("notification", id);
     if (!current || current.memberId !== memberId)

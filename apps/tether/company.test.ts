@@ -183,3 +183,319 @@ test("verified resolution persists evidence and emits a minimal resolution notic
     }),
   );
 });
+
+test("normal workspaces and conversations persist independently with current membership and dedup", () => {
+  const path = join(
+    mkdtempSync(join(tmpdir(), "tether-workspace-")),
+    "company.sqlite",
+  );
+  let store = new TetherCompanyStore(path);
+  const workspace = store.createWorkspace({
+    name: "Training planning",
+    nodeIds: ["training-catalog"],
+    memberIds: ["employee-priya"],
+    createdBy: "employee-ava",
+  });
+  assert.equal(store.allState().incidents.length, 0);
+  const message = store.postConversation({
+    scope: "workspace",
+    workspaceId: workspace.id,
+    authorId: "employee-priya",
+    text: "Review dataset readiness",
+    idempotencyKey: "one",
+  });
+  assert.equal(
+    store.postConversation({
+      scope: "workspace",
+      workspaceId: workspace.id,
+      authorId: "employee-priya",
+      text: "Duplicate",
+      idempotencyKey: "one",
+    }).id,
+    message.id,
+  );
+  assert.throws(
+    () =>
+      store.postConversation({
+        scope: "workspace",
+        workspaceId: workspace.id,
+        authorId: "employee-elena",
+        text: "No access",
+        idempotencyKey: "two",
+      }),
+    /workspace access/,
+  );
+  const companyMessage = store.postConversation({
+    scope: "company",
+    authorId: "employee-elena",
+    text: "Company update",
+    idempotencyKey: "one",
+  });
+  assert.ok(companyMessage.sequence > message.sequence);
+  store.close();
+  store = new TetherCompanyStore(path);
+  assert.equal(
+    store.allState().workspaces.find((item) => item.id === workspace.id)?.name,
+    "Training planning",
+  );
+  assert.equal(store.allState().conversations.length, 2);
+  const changed = store.updateWorkspace(workspace.id, 1, { memberIds: [] });
+  assert.throws(
+    () => store.updateWorkspace(workspace.id, 1, { name: "stale" }),
+    /changed/,
+  );
+  assert.throws(
+    () =>
+      store.postConversation({
+        scope: "workspace",
+        workspaceId: workspace.id,
+        authorId: "employee-priya",
+        text: "Lost access",
+        idempotencyKey: "one",
+      }),
+    /workspace access/,
+  );
+  store.deleteWorkspace(workspace.id, changed.revision);
+  assert.equal(store.allState().conversations.length, 1);
+  store.close();
+});
+
+test("incident priority persists and cannot bypass verified resolution", () => {
+  const store = new TetherCompanyStore();
+  const incident = store.createIncident({
+    title: "Retry issue",
+    observation: "Unexpected retry",
+    priority: "critical",
+    regionId: "global",
+    nodeIds: ["retry-route"],
+    memberIds: ["employee-noah"],
+    commanderId: "employee-ava",
+  });
+  assert.equal(incident.priority, "critical");
+  assert.equal(
+    store.updateIncident(incident.id, 1, { priority: "low" }).priority,
+    "low",
+  );
+  assert.throws(
+    () => store.updateIncident(incident.id, 2, { status: "resolved" }),
+    /verification|verified/,
+  );
+  assert.throws(
+    () => store.updateIncident(incident.id, 2, { priority: "urgent" as any }),
+    /priority/,
+  );
+  store.close();
+});
+
+test("repository deletion survives restart and links update with revision checks", () => {
+  const path = join(
+    mkdtempSync(join(tmpdir(), "tether-repository-")),
+    "company.sqlite",
+  );
+  let store = new TetherCompanyStore(path);
+  const ref = store.allState().repositories[0]!;
+  const updated = store.addRepositoryReference({
+    ...ref,
+    path: "apps/tether/seed.ts",
+    revision: "WORKTREE",
+  });
+  assert.equal(updated.id, ref.id);
+  assert.equal(updated.revisionNumber, ref.revisionNumber + 1);
+  assert.throws(
+    () =>
+      store.addRepositoryReference({ ...ref, path: "apps/tether/types.ts" }),
+    /changed/,
+  );
+  store.deleteRepositoryReference(ref.id, updated.revisionNumber);
+  store.close();
+  store = new TetherCompanyStore(path);
+  assert.equal(
+    store.allState().repositories.some((item) => item.id === ref.id),
+    false,
+  );
+  store.close();
+});
+
+test("layout batch is atomic, scoped, and does not change graph semantics", () => {
+  const store = new TetherCompanyStore();
+  const before = store.allState();
+  const node = before.nodes[0]!;
+  assert.throws(
+    () =>
+      store.updateNodeLayouts(
+        [
+          { id: node.id, x: 5, y: 5, layoutRevision: node.layoutRevision },
+          { id: "missing", x: 0, y: 0, layoutRevision: 1 },
+        ],
+        new Set([node.id, "missing"]),
+      ),
+    /scope/,
+  );
+  assert.equal(
+    store.allState().nodes.find((item) => item.id === node.id)?.layoutRevision,
+    node.layoutRevision,
+  );
+  store.updateNodeLayouts(
+    [{ id: node.id, x: 5, y: 5, layoutRevision: node.layoutRevision }],
+    new Set([node.id]),
+  );
+  assert.equal(
+    store.allState().organization.semanticRevision,
+    before.organization.semanticRevision,
+  );
+  store.close();
+});
+
+test("broad grants require both current administrator role and stored organization grant", () => {
+  const store = new TetherCompanyStore();
+  assert.equal(store.isOrganizationAdmin("employee-ava"), true);
+  const workspace = store.createWorkspace({
+    name: "Restricted workspace",
+    nodeIds: ["training-catalog"],
+    memberIds: ["employee-priya"],
+    createdBy: "employee-ava",
+  });
+  const ava = store.member("employee-ava")!;
+  store.updateMember(ava.id, ava.revision, { roleTemplate: "engineer" });
+  assert.equal(store.isOrganizationAdmin(ava.id), false);
+  assert.deepEqual(
+    store.permissionGrants(
+      ava.id,
+      { kind: "node", id: "training-catalog" },
+      "graph:write",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    store.permissionGrants(
+      ava.id,
+      { kind: "node", id: "training-catalog" },
+      "graph:read",
+    ),
+    [],
+  );
+  assert.throws(
+    () =>
+      store.postConversation({
+        scope: "workspace",
+        workspaceId: workspace.id,
+        authorId: ava.id,
+        text: "Demoted access",
+        idempotencyKey: "demoted",
+      }),
+    /access/,
+  );
+  const elena = store.member("employee-elena")!;
+  store.updateMember(elena.id, elena.revision, {
+    roleTemplate: "senior_manager",
+  });
+  assert.equal(store.isOrganizationAdmin(elena.id), false);
+  assert.deepEqual(
+    store.permissionGrants(elena.id, undefined, "organization:admin"),
+    [],
+  );
+  assert.deepEqual(
+    store.permissionGrants(
+      elena.id,
+      { kind: "node", id: "training-catalog" },
+      "graph:read",
+    ),
+    [],
+  );
+  assert.throws(
+    () =>
+      store.postConversation({
+        scope: "workspace",
+        workspaceId: workspace.id,
+        authorId: elena.id,
+        text: "Role-only access",
+        idempotencyKey: "role-only",
+      }),
+    /access/,
+  );
+  const inactive = store.member("employee-priya")!;
+  store.updateMember(inactive.id, inactive.revision, { active: false });
+  assert.deepEqual(store.permissionGrants(inactive.id), []);
+  store.close();
+});
+
+test("explicit incident sharing grants only scoped reads and removal revokes permanently", () => {
+  const store = new TetherCompanyStore();
+  const incident = store.createIncident({
+    title: "Retry review",
+    observation: "Reported customer retry issue",
+    regionId: "global",
+    nodeIds: ["job-api", "retry-route", "tenant-auth"],
+    memberIds: ["employee-noah", "employee-priya"],
+    commanderId: "employee-ava",
+  });
+  const read = () =>
+    store.permissionGrants(
+      "employee-priya",
+      { kind: "node", id: "retry-route" },
+      "graph:read",
+    );
+  assert.deepEqual(read(), []);
+  store.shareIncidentSystems(incident.id, ["employee-priya"], ["retry-route"]);
+  assert.equal(read().length, 1);
+  assert.deepEqual(
+    store.permissionGrants(
+      "employee-priya",
+      { kind: "node", id: "retry-route" },
+      "graph:write",
+    ),
+    [],
+  );
+  const refs = store
+    .allState()
+    .repositories.filter((ref) => ref.nodeId === "retry-route");
+  assert.ok(refs.length);
+  for (const ref of refs)
+    assert.deepEqual(
+      store.permissionGrants(
+        "employee-priya",
+        { kind: "repository", id: ref.id },
+        "repository:read",
+      ),
+      [],
+    );
+  store.updateIncident(incident.id, 1, { nodeIds: ["job-api", "tenant-auth"] });
+  assert.deepEqual(read(), []);
+  store.updateIncident(incident.id, 2, {
+    nodeIds: ["job-api", "tenant-auth", "retry-route"],
+  });
+  assert.deepEqual(read(), []);
+  store.shareIncidentSystems(incident.id, ["employee-priya"], ["retry-route"]);
+  store.updateIncident(incident.id, 3, {
+    memberIds: ["employee-ava", "employee-noah"],
+  });
+  assert.deepEqual(read(), []);
+  store.updateIncident(incident.id, 4, {
+    memberIds: [
+      "employee-ava",
+      "employee-noah",
+      "employee-priya",
+      "employee-elena",
+    ],
+  });
+  assert.deepEqual(read(), []);
+  assert.throws(
+    () =>
+      store.shareIncidentSystems(
+        incident.id,
+        ["employee-elena"],
+        ["retry-route"],
+      ),
+    /role cannot read/,
+  );
+  assert.throws(
+    () =>
+      store.shareIncidentSystems(
+        incident.id,
+        ["employee-priya"],
+        ["training-catalog"],
+      ),
+    /already in this incident/,
+  );
+  store.close();
+});

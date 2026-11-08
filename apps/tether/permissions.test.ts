@@ -38,6 +38,113 @@ function code(expected: string, operation: () => void): void {
   );
 }
 
+test("engineer graph edits require an exact current node grant and confer no approval authority", () => {
+  const ownNode = {
+    organizationId: "northstar",
+    kind: "node" as const,
+    id: "owned-component",
+  };
+  const ownGrant: ResourceGrant = {
+    id: "own-node",
+    employeeId: membership.employeeId,
+    organizationId: "northstar",
+    resourceKind: "node",
+    resourceId: ownNode.id,
+    capabilities: ["graph:read", "graph:write"],
+    policyRevision: membership.policyRevision,
+  };
+  authorize({
+    context,
+    currentMembership: membership,
+    capability: "graph:write",
+    resource: ownNode,
+    grants: [ownGrant],
+  });
+  code("RESOURCE_GRANT_REQUIRED", () =>
+    authorize({
+      context,
+      currentMembership: membership,
+      capability: "graph:write",
+      resource: { ...ownNode, id: "another-employees-component" },
+      grants: [ownGrant],
+    }),
+  );
+  code("RESOURCE_GRANT_REQUIRED", () =>
+    authorize({
+      context,
+      currentMembership: membership,
+      capability: "graph:write",
+      resource: {
+        organizationId: "northstar",
+        kind: "organization",
+        id: "northstar",
+      },
+      grants: [ownGrant],
+    }),
+  );
+  code("CAPABILITY_DENIED", () =>
+    authorize({
+      context,
+      currentMembership: membership,
+      capability: "incident:approve",
+      resource: {
+        organizationId: "northstar",
+        kind: "incident",
+        id: "incident-retry",
+      },
+      grants: [ownGrant],
+    }),
+  );
+});
+
+test("an administrator role alone does not replace a current organization grant", () => {
+  const admin: MembershipSnapshot = {
+    ...membership,
+    employeeId: "employee-ava",
+    role: "senior_manager",
+  };
+  const session: AuthContext = { ...context, ...admin };
+  const resource = {
+    organizationId: "northstar",
+    kind: "organization" as const,
+    id: "northstar",
+  };
+  code("RESOURCE_GRANT_REQUIRED", () =>
+    authorize({
+      context: session,
+      currentMembership: admin,
+      capability: "organization:admin",
+      resource,
+      grants: [],
+    }),
+  );
+  const grant: ResourceGrant = {
+    id: "current-admin",
+    employeeId: admin.employeeId,
+    organizationId: "northstar",
+    resourceKind: "organization",
+    resourceId: "northstar",
+    capabilities: ["organization:admin"],
+    policyRevision: admin.policyRevision,
+  };
+  authorize({
+    context: session,
+    currentMembership: admin,
+    capability: "organization:admin",
+    resource,
+    grants: [grant],
+  });
+  code("RESOURCE_GRANT_REQUIRED", () =>
+    authorize({
+      context: session,
+      currentMembership: admin,
+      capability: "organization:admin",
+      resource,
+      grants: [{ ...grant, policyRevision: admin.policyRevision - 1 }],
+    }),
+  );
+});
+
 test("resource grants are organization, employee, revision, and capability bound", () => {
   authorize({
     context,

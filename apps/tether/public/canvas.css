@@ -1,0 +1,394 @@
+.tether-canvas {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  touch-action: none;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: #f3f5f8;
+  background-image: radial-gradient(#cbd3df 0.8px, transparent 0.8px);
+  cursor: default;
+}
+.tether-canvas .canvas-transform {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.tether-canvas .canvas-lanes,
+.tether-canvas .canvas-cards {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tether-canvas .canvas-lanes {
+  z-index: 0;
+}
+.tether-canvas .canvas-cards {
+  z-index: 2;
+}
+.tether-canvas .canvas-lane {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid #d9e0e9;
+  border-radius: 18px;
+  background: #edf1f64d;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 17px;
+  color: #667386;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tether-canvas .canvas-lane small {
+  font-size: 10px;
+  font-weight: 450;
+  color: #8a95a5;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tether-canvas .edge-layer,
+.tether-canvas .canvas-connection-preview {
+  position: absolute;
+  inset: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+.tether-canvas .edge-layer {
+  z-index: 1;
+}
+.tether-canvas .canvas-marquee,
+.tether-canvas .canvas-connection-preview {
+  z-index: 3;
+}
+.tether-canvas .edge {
+  pointer-events: none;
+  cursor: pointer;
+}
+.tether-canvas .edge-line {
+  fill: none;
+  stroke: #a8b5c8;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+.tether-canvas .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  pointer-events: stroke;
+  cursor: pointer;
+  vector-effect: non-scaling-stroke;
+}
+.tether-canvas .edge.active .edge-line {
+  stroke: #647faa;
+  stroke-width: 2;
+}
+.tether-canvas .edge.selected .edge-line {
+  stroke: #275fe5;
+  stroke-width: 3;
+}
+.tether-canvas .edge:hover .edge-line {
+  stroke: #6c8abd;
+  stroke-width: 2.5;
+}
+.tether-canvas .edge text {
+  font:
+    10px "Avenir Next",
+    system-ui,
+    sans-serif;
+  fill: #5a6d87;
+  paint-order: stroke;
+  stroke: #f3f5f8;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.tether-canvas .canvas-node {
+  position: absolute;
+  box-sizing: border-box;
+  min-height: 0;
+  margin: 0;
+  padding: 14px 15px 12px;
+  border: 1px solid #d5dce6;
+  border-radius: 12px;
+  background: #fff;
+  color: #263548;
+  box-shadow:
+    0 2px 4px #1a2e4f06,
+    0 1px 1px #1a2e4f04;
+  pointer-events: auto;
+  cursor: grab;
+  overflow: visible;
+  transition:
+    box-shadow 0.1s,
+    border-color 0.1s;
+  font-family: "Avenir Next", system-ui, sans-serif;
+}
+.tether-canvas .canvas-node.read-only {
+  cursor: default;
+}
+.tether-canvas .canvas-node:hover {
+  border-color: #a9b8cd;
+  box-shadow: 0 3px 10px #20395c0d;
+}
+.tether-canvas .canvas-node.selected {
+  border-color: #426de0;
+  box-shadow:
+    0 0 0 2px #426de025,
+    0 3px 10px #20395c0d;
+}
+.tether-canvas .canvas-node.connect-source {
+  border-color: #426de0;
+  box-shadow: 0 0 0 3px #426de024;
+}
+.tether-canvas .node-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 16px;
+}
+.tether-canvas .node-symbol {
+  font-size: 15px;
+  line-height: 16px;
+  color: #7b8ca5;
+}
+.tether-canvas .node-kind {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 650;
+  color: #8290a3;
+  margin: 0;
+  line-height: 16px;
+}
+.tether-canvas .node-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 9px;
+  line-height: 14px;
+  color: #788494;
+  white-space: nowrap;
+}
+.tether-canvas .node-status i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9aa7b5;
+}
+.tether-canvas .status-healthy i {
+  background: #6c9b84;
+}
+.tether-canvas .status-degraded i {
+  background: #d99a47;
+}
+.tether-canvas .status-degraded {
+  color: #ae7934;
+}
+.tether-canvas .canvas-node h3 {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.025em;
+  font-weight: 650;
+  margin: 7px 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  color: #263548;
+}
+.tether-canvas .canvas-node footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 10px;
+  line-height: 18px;
+  color: #8792a2;
+  white-space: nowrap;
+}
+.tether-canvas .avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: 600;
+  background: #f0f3f7;
+  color: #748399;
+}
+.tether-canvas .node-owner {
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tether-canvas .node-critical {
+  margin-left: auto;
+  font-size: 8px;
+  color: #a47b52;
+}
+.tether-canvas .node-port {
+  display: none;
+  position: absolute;
+  right: -8px;
+  left: auto;
+  top: calc(50% - 8px);
+  width: 16px;
+  height: 16px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #9cadc6;
+  border-radius: 50%;
+  background: white;
+  color: #647fa7;
+  font: 12px/12px system-ui;
+  cursor: crosshair;
+  box-shadow: none;
+}
+.tether-canvas .canvas-node:hover .node-port,
+.tether-canvas .canvas-node.selected .node-port {
+  display: flex;
+}
+.tether-canvas .canvas-marquee {
+  position: absolute;
+  border: 1px solid #5683e8;
+  background: #4a7de918;
+  pointer-events: none;
+}
+.tether-canvas .canvas-connection-preview path {
+  fill: none;
+  stroke: #507ce1;
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+}
+.tether-canvas .zoom-readout {
+  position: absolute;
+  left: 18px;
+  bottom: 17px;
+  right: auto;
+  top: auto;
+  font:
+    10px ui-monospace,
+    SFMono-Regular,
+    monospace;
+  color: #8d99a9;
+  pointer-events: none;
+  background: none;
+  padding: 0;
+  border: 0;
+}
+.tether-canvas .canvas-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #8b97a8;
+  font-size: 13px;
+  pointer-events: none;
+}
+.tether-canvas .canvas-connect-hint {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 12px #263e6320;
+  border: 1px solid #d7e1f1;
+  white-space: nowrap;
+  color: #60799d;
+  font-size: 11px;
+  pointer-events: none;
+}
+.tether-canvas.is-panning,
+.tether-canvas.is-panning .canvas-node {
+  cursor: grabbing;
+}
+.tether-canvas [hidden] {
+  display: none !important;
+}
+/* Highlights are driven only by observed tool evidence. */
+.tether-canvas .canvas-node.evidence-scope {
+  border-color: #afc0df;
+}
+.tether-canvas .canvas-node.evidence-complete {
+  background: #f7faf9;
+  border-color: #abc6ba;
+}
+.tether-canvas .canvas-node.evidence-active {
+  border-color: #5278ca;
+  box-shadow:
+    0 0 0 4px #5278ca1a,
+    0 3px 10px #20395c0d;
+}
+.tether-canvas .edge.evidence-complete .edge-line {
+  stroke: #89aa9a;
+  stroke-width: 2;
+}
+.tether-canvas .edge.evidence-active .edge-line {
+  stroke: #5278ca;
+  stroke-width: 2.5;
+}
+.tether-canvas .canvas-node.selected {
+  border-color: #426de0;
+  box-shadow:
+    0 0 0 2px #426de025,
+    0 3px 10px #20395c0d;
+}
+/* A verified restriction is separate from service availability and source-code repair. */
+.tether-canvas .canvas-node.safety-restricted {
+  background: #fffaf2;
+}
+.tether-canvas .canvas-node.safety-restricted h3 {
+  margin-bottom: 2px;
+}
+.tether-canvas .node-status.status-restricted {
+  color: #a56b2e;
+  font-weight: 600;
+  font-size: 8px;
+}
+.tether-canvas .node-status.status-restricted i {
+  background: #c58b49;
+}
+.tether-canvas .node-safety-detail {
+  margin: 0 0 3px;
+  padding: 0;
+  font-size: 9px;
+  line-height: 13px;
+  color: #9a774e;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tether-canvas .node-availability {
+  margin-left: auto;
+  font-size: 8px;
+  color: #7d8796;
+  white-space: nowrap;
+}
+.tether-canvas .safety-restricted .node-owner {
+  max-width: 73px;
+}
+.tether-canvas
+  .edge.safety-context:not(.selected):not(.evidence-active)
+  .edge-line {
+  stroke: #b8a48b;
+}

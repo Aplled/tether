@@ -92,6 +92,7 @@ const ROLE_TEMPLATES: Readonly<Record<TetherRole, ReadonlySet<Capability>>> = {
   engineer: new Set([
     "directory:read",
     "graph:read",
+    "graph:write",
     "incident:read",
     "incident:participate",
     "repository:read",
@@ -102,6 +103,7 @@ const ROLE_TEMPLATES: Readonly<Record<TetherRole, ReadonlySet<Capability>>> = {
   data_science_manager: new Set([
     "directory:read",
     "graph:read",
+    "graph:write",
     "incident:read",
     "incident:participate",
     "repository:read",
@@ -167,7 +169,6 @@ export function authorize(input: {
         "RESOURCE_SCOPE_DENIED",
         "organization administration is organization-bound",
       );
-    return;
   }
 
   // Marketing receives only explicit, low-detail notices. A notice grant cannot
