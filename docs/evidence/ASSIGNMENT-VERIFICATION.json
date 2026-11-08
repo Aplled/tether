@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-08T15:05:32.755Z",
+  "baseCommit": "ee8fb17",
+  "scope": "Nemotron incident assignment, recipient-specific prompt drafting, reviewed batch delivery and isolated account access",
+  "provenance": "Synthetic Northstar records, local SQLite and real CUA interactions. Existing Brev A100 and private SSH forward; no production systems changed.",
+  "checks": [
+    {
+      "command": "./scripts/dev.sh run tether:check",
+      "passed": 92,
+      "failed": 0,
+      "durationMs": 10986,
+      "note": "Includes 29 assignment-runtime checks plus HTTP lifecycle coverage for authority, consent, transactional preflight, durable dedup, stale/expired plans, role/source revocation, title/notification projection, planning concurrency and cleanup."
+    },
+    {
+      "command": "./scripts/dev.sh run typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "Prettier, client syntax and git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "Staged credential and source/screenshot hash verification",
+      "status": "passed"
+    }
+  ],
+  "runtime": {
+    "url": "http://127.0.0.1:4173",
+    "storage": "local plaintext synthetic SQLite",
+    "framework": "Existing MCP SDK bridge plus bounded staged assignment coordinator",
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+    "provider": "Brev / vLLM",
+    "modelDeadlineMs": 30000,
+    "maxModelCalls": 7,
+    "maxPromptWriters": 2,
+    "maxAssignments": 6,
+    "maxConcurrentPlans": 2,
+    "maxPlansPerIncident": 1,
+    "qaServerStopped": true,
+    "mainServerLeftRunning": true
+  },
+  "browser": {
+    "independentRounds": [
+      {
+        "round": 1,
+        "result": "Actual four-account setup, volunteering, fallback delivery, reload, both prompt copy/paste operations and marketing privacy passed. Found overlapping manager/responder work, unexplained unmapped nodes, generic source-limited training prompt and own/manager availability label error. No live drafting claimed."
+      },
+      {
+        "round": 2,
+        "result": "Fresh incident, both own-account volunteer actions, nonoverlapping delivery, explicit three-of-five coverage, reload, clipboard checks and marketing privacy passed. Actual model planner scope failure remained; other-responder availability display was misleading. These failures drove the final scope normalization and private-availability label fixes."
+      }
+    ],
+    "leadFinal": {
+      "url": "http://127.0.0.1:4173",
+      "incidentId": "incident-f1bca7d9-81e9-478d-9067-bae20e1e0a45",
+      "title": "Customer job restart",
+      "selectedSystems": 5,
+      "proposedSystems": 3,
+      "assignments": 2,
+      "mode": "live",
+      "allRecipientDraftsLive": true,
+      "verified": [
+        "Created a fresh five-system incident through the UI, with Noah and Priya.",
+        "Each responder explicitly joined for one hour in their own authenticated tab.",
+        "Manager Plan assignments returned Live model with two different titles and scoped source references; unmapped GPU Job API and Dallas Training Queue were explicitly listed.",
+        "Assign all delivered two saved tasks and notices. Both roles showed only their own Agent prompt/Edit controls; other generated task title was generic.",
+        "Own and manager views show Available for this incident; other-person private availability is omitted.",
+        "Priya reloaded and retained the task and live provenance.",
+        "Noah Copy prompt produced an exact 1871-character clipboard match. Select text plus keyboard copy pasted the exact prompt into an unsent composer, then the draft was cleared. An earlier attempt left the modal before asynchronous copying finished and pasted older clipboard content; it was cleared without sending, then correctly retested.",
+        "Marketing retained zero incidents and only the minimal approved responder notice.",
+        "Four role tabs retained, no containment executed, no external coding agent launched."
+      ],
+      "viewport": {
+        "verified": {
+          "width": 1280,
+          "height": 720,
+          "horizontalDocumentOverflow": false
+        },
+        "requestedLarger": {
+          "width": 1440,
+          "height": 900,
+          "actualWidth": 1280,
+          "actualHeight": 720,
+          "verified": false
+        },
+        "overrideReset": true
+      },
+      "limitations": [
+        "Long proposal/prompt content scrolls vertically.",
+        "The 1440x900 override did not change the actual current browser viewport; no new larger-size acceptance claim."
+      ]
+    },
+    "screenshots": [
+      {
+        "path": "assignments/before-model-scope-fix.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "05c8d097ab40074cde4d3f3d432341ee0390abd7047fd6af7aadd9420ccc3ec6",
+        "stage": "Historical failure before repair"
+      },
+      {
+        "path": "assignments/delivered-data-manager.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "db52b35369c5f02927a379e86fc221adfd0ede0bcfcfb0a9c65f8b6e2d274c41",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/delivered-engineer.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "2472f0dfc21bb3de181a49dbc4d6a6ab60b0af860421660e73590b99c42ed188",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/delivered-manager.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "16edd6ef44b6f45eb9fb2d4a71e5599d52323b8e34721d779319f83a06225d95",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/live-data-prompt.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "a51d1632008f89877e1900deacbb4272240e9cd6544f798146874ba3feadbeb7",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/live-engineer-prompt.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "d25e7248225575ed743ffbcaa9b1d7d5600841bce7ef4a248a7fdc5490c2dea4",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/live-person-cards.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "5eafa00f52bacf1fd7a8915ae4ba9ffa2605d2b9d2f63bd32acb14ec48948cda",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/live-plan-1280.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "027afb09e9803c4c4fa1b7c8374daa8ffa9b012dc7b764eed47c7ea886c46640",
+        "stage": "Main-app live verification"
+      },
+      {
+        "path": "assignments/marketing-private.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "4ad625b7439153152826b5815d7be34617d4e1fe9146513820fd884353a58dbd",
+        "stage": "Main-app live verification"
+      }
+    ]
+  },
+  "modelEvidence": {
+    "directExactCase": "assignments/exact-live-probe.json",
+    "directExactCaseSha256": "0131848045dc56de544c4ecf0e95148c9872e1d7192e761df4ca4902c5ba52ec",
+    "directProbeMs": 3797,
+    "browserMainLiveVerified": true,
+    "note": "Planner proposals are untrusted. Known broader nodes can be reduced to current permitted mappings; unknown owners, nodes and paths still fail closed. Each prompt writer receives only the recipient scope."
+  },
+  "sourceReview": {
+    "reviewer": "Independent GPT-6 Astra worker, read-only",
+    "findingsFixed": [
+      "Recipient-specific generated task titles were shared too broadly.",
+      "Manager repository grants were missing from planning source intersection.",
+      "Non-assignee prompt access used raw commander grants instead of role-plus-grant authorization.",
+      "Legacy title-bearing assignment notices leaked after retitle/source revocation."
+    ],
+    "confirmation": "Reviewer confirmed the fixes in source; HTTP regressions reproduce the prior failures. This is not a comprehensive security audit."
+  },
+  "limitations": [
+    "External coding applications are not invoked automatically; assignments and prepared prompts are delivered inside Tether. Execution remains a deliberate external human step.",
+    "Manager reviews and applies one batch. Assignment delivery never grants access or approves infrastructure actions.",
+    "Prompts are untrusted model suggestions requiring review. Source excerpts are not loaded into the writers; supplied node metadata and approved path mappings limit usefulness. The training mapping currently points at catalog definitions in apps/tether/seed.ts, not a complete production training runtime.",
+    "Only three of the five selected systems had eligible source mappings in the verified scenario. Remaining systems are named as uncovered.",
+    "Missing model/provider access or invalid outputs use explicitly labeled fallback; no uptime guarantee.",
+    "Local plaintext synthetic stores and accounts, no deployed SSO or production connectors.",
+    "Existing response/containment and encrypted three-local-peer code remains; no physical-radio mesh or production-security claim."
+  ],
+  "sourceFileSha256": {
+    "AGENTS.md": "12c4234b23d4d0a75ac5ea2d06ffee4142c897a27d7d2b6f4ae5df71cd6418d2",
+    "README.md": "8bae63ee4d832cee00334fa4fb828b915ffbde60b6bd35815556dbb8dac4c451",
+    "apps/tether/assignments.ts": "5c19f68a688c43591af0f1d273c268ee96c0946574cf07c05e31e5cf2b452515",
+    "apps/tether/assignments.test.ts": "9b985b42877075ef208c2fdbf7fd4fb78fc25789377e04f33ea10938252f8905",
+    "apps/tether/assignment-integration.test.ts": "942a30f5b6c1e3b60602c148daec7b9a388fbf831fb0f458b56583bf62ef6a72",
+    "apps/tether/company.ts": "d60ca8e9e66acc450242f60913719a0f0f5f8e25a60f36fad68759aa6d9c921c",
+    "apps/tether/handoffs.ts": "b06616921b2f9a13308a9703ac6651748899b539a647cd3c31ed22b957d76bca",
+    "apps/tether/server.ts": "57de186f4fe7249f5443410a12dccabd2a624234135196f9c1f28b89ad042345",
+    "apps/tether/types.ts": "f1296694b5f041d2f48d6a6268a610f3525bdd7ca3c62845b7ae50d4c3390c98",
+    "apps/tether/public/app.js": "8a5a8c3de477cda5719d634fecfd9a7641eb7d4673215aba861d62416a1b5a97",
+    "apps/tether/public/panels.js": "1f3d9f2f7105f5ad2b609c04a57b752ecc3ef724a831af9ac5a4df68f177d7c7",
+    "apps/tether/public/styles.css": "6339b4cde76b732224f32022d8950554f080f6582a443fe82913969b9d7134c3",
+    "docs/AGENT-ORCHESTRATION.md": "bc67688f6325624d7fd16ef995b56a9e8562fa079cb1263c9d1d7155edab6828",
+    "docs/TETHER-RUNBOOK.md": "e1554cda64831b13a2fc3f9d1e94be6c9ff23ab328ca24e5aedb13bca352e129",
+    "docs/ASSIGNMENT-WORKFLOW-CONTRACT.md": "b70e5c0aa0690d85f1e057daf67b9d6aacc576622cf6e5ea035d32d4ba1fad2c"
+  }
+}

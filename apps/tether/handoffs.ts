@@ -14,6 +14,9 @@ export type TaskBrief = {
   snapshotDigest: string;
   stale: boolean;
   text: string;
+  permittedPaths?: string[];
+  provenance?: IncidentTask["provenance"];
+  taskDefinitionDigest?: string;
 };
 
 export function generateTaskBrief(input: {
@@ -107,6 +110,7 @@ export function generateTaskBrief(input: {
     snapshotDigest,
     stale: false,
     text: lines.join("\n"),
+    permittedPaths: paths,
   };
 }
 export function briefIsStale(
@@ -115,9 +119,11 @@ export function briefIsStale(
   task: IncidentTask,
 ): boolean {
   const incident = state.incidents.find((i) => i.id === task.incidentId);
-  const paths = state.repositories
-    .filter((ref) => task.nodeIds.includes(ref.nodeId))
-    .map((ref) => ref.path);
+  const paths =
+    brief.permittedPaths ??
+    state.repositories
+      .filter((ref) => task.nodeIds.includes(ref.nodeId))
+      .map((ref) => ref.path);
   const repositoryDigest = createHash("sha256")
     .update(
       JSON.stringify(
@@ -132,10 +138,25 @@ export function briefIsStale(
     !incident ||
     brief.assigneeId !== task.ownerId ||
     brief.snapshotRevision !== state.organization.semanticRevision ||
-    brief.taskRevision !== task.revision ||
+    (brief.taskDefinitionDigest
+      ? brief.taskDefinitionDigest !== taskDefinitionDigest(task)
+      : brief.taskRevision !== task.revision) ||
     brief.incidentRevision !== incident.revision ||
     brief.evidenceRevision !== incident.evidenceRevision ||
     brief.repositoryDigest !== repositoryDigest ||
     !incident.memberIds.includes(task.ownerId)
   );
+}
+
+/** Acknowledging progress does not change the instructions; reassignment or retitling does. */
+export function taskDefinitionDigest(task: IncidentTask): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        ownerId: task.ownerId,
+        title: task.title,
+        nodeIds: task.nodeIds,
+      }),
+    )
+    .digest("hex");
 }

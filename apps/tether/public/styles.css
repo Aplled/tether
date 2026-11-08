@@ -3313,3 +3313,314 @@ dd {
   margin-top: 3px;
   color: var(--muted);
 }
+
+/* Assignment review is a normal incident view, with each proposed handoff readable. */
+#incident-tasks,
+.assignment-planner,
+.assignment-review,
+.assignment-person {
+  min-width: 0;
+}
+.assignment-planner {
+  margin-bottom: 24px;
+  border-color: #ccd9f3;
+  background: linear-gradient(135deg, #f3f7ff, #fff 60%);
+}
+.assignment-planner .tasks-header {
+  margin-bottom: 0;
+  align-items: flex-start;
+}
+.assignment-planner .tasks-header > div {
+  min-width: 0;
+  max-width: 680px;
+}
+.assignment-planner .tasks-header h2 {
+  font-size: 25px;
+  margin: 9px 0;
+}
+.assignment-planner .tasks-header p,
+.assignment-summary {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.assignment-planner .tasks-header > button,
+.assignment-apply > button {
+  flex-shrink: 0;
+  font-size: 14px;
+  min-height: 43px;
+}
+.assignment-working {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 24px;
+}
+.assignment-working p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.assignment-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  padding: 0;
+  gap: 12px;
+  margin: 23px 0 0;
+}
+.assignment-stages li {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.assignment-stages li > span {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  color: var(--blue);
+  background: #eef3fd;
+  margin-bottom: 12px;
+}
+.assignment-stages b,
+.assignment-stages small {
+  display: block;
+}
+.assignment-stages b {
+  font-size: 14px;
+}
+.assignment-stages small {
+  margin-top: 7px;
+  color: var(--muted);
+}
+.assignment-review {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.assignment-review > .page-header {
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.assignment-review h3 {
+  margin: 8px 0 12px;
+}
+.assignment-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 9px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.assignment-provenance > small {
+  width: 100%;
+  font-size: 12px;
+}
+.assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+  margin-top: 20px;
+}
+.assignment-person {
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.assignment-person h3 {
+  font-size: 19px;
+  line-height: 1.4;
+  margin-top: 20px;
+}
+.assignment-person p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.assignment-person .responder-row {
+  margin: 0;
+}
+.assignment-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 15px 0;
+}
+.assignment-nodes > span {
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: #eef3f9;
+  color: #3c536e;
+  font-size: 12px;
+}
+.assignment-prompt {
+  margin-top: 18px;
+}
+.assignment-prompt summary,
+.assignment-observed summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--blue);
+}
+.assignment-prompt textarea {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  max-height: 600px;
+  margin-top: 14px;
+  resize: vertical;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.assignment-prompt ul {
+  padding-left: 18px;
+  font-size: 12px;
+}
+.assignment-skipped {
+  background: #fff8ed;
+  border: 1px solid #eddfc6;
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 20px;
+}
+.assignment-skipped p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.assignment-skipped > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.assignment-skipped > div > span {
+  color: #725c40;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.assignment-observed {
+  margin-top: 22px;
+}
+.assignment-observed li {
+  margin: 14px 0;
+  font-size: 13px;
+}
+.assignment-observed li > span {
+  display: inline-block;
+  margin-left: 10px;
+  color: var(--muted);
+}
+.assignment-observed p {
+  margin: 5px 0;
+  line-height: 1.5;
+}
+.assignment-apply,
+.assignment-volunteer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.assignment-apply p,
+.assignment-volunteer p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 670px;
+}
+.assignment-volunteer {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 0 0 28px;
+  background: #f8fafc;
+}
+.assignment-volunteer p {
+  margin-top: 5px;
+}
+.assignment-volunteer > button,
+.assignment-volunteer > .pill {
+  flex-shrink: 0;
+}
+.assignment-error {
+  color: #943e34;
+  background: #fff3ef;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.assignment-delivered {
+  margin-top: 20px;
+  padding: 18px;
+  background: #edf6f1;
+  color: #245b45;
+  border-radius: 10px;
+}
+.assignment-delivered p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+.task-card .prepared-prompt-note {
+  color: #245b45;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0 4px;
+}
+.task-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .assignment-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .assignment-planner .tasks-header,
+  .assignment-apply,
+  .assignment-volunteer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+@media (max-width: 540px) {
+  .assignment-stages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .assignment-person {
+    padding: 16px;
+  }
+  .assignment-planner .tasks-header h2 {
+    font-size: 22px;
+  }
+}
+#saved-tasks .task-card h3 {
+  font-size: 18px;
+  line-height: 1.45;
+}
+#saved-tasks .task-card p,
+#saved-tasks .task-card button {
+  font-size: 13px;
+}

@@ -1,5 +1,7 @@
 # Agent orchestration plan
 
+**Latest implemented direction, November 8:** the company app now adds a bounded assignment workflow: current scoped MCP reads → Nemotron dispatcher → up to two parallel recipient-specific prompt writers → manager review → transactional task/prompt delivery. Each writer receives only its recipient's authorized systems and repository references. Plan expiry, changing evidence/access/tasks/availability, duplicate application and off-hours consent are enforced separately by the server. This replaces the manual-only assignment preparation described in older sections. It does not invoke an external coding application or grant infrastructure execution. The implementation contract is [ASSIGNMENT-WORKFLOW-CONTRACT.md](ASSIGNMENT-WORKFLOW-CONTRACT.md); current implementation workers use the user's later GPT-6 Astra upgrade.
+
 **Status:** Accepted backend checkpoint implemented and frozen November 7, 2026. Sixty tests, real MCP, bounded orchestration, response/fallback, and encrypted local-peer demos pass. See [the handoff](OVERNIGHT-HANDOFF.md) for evidence and incomplete production requirements.\
 **Date:** November 7, 2026.\
 **Model requirement:** Every implementation worker uses **GPT-5.6 Sol** (`gpt-5.6-sol`). No silent fallback.\
@@ -19,13 +21,13 @@ The requested model is a hard assignment constraint, not a preference to reinter
 
 ## 2. Planned worker ownership
 
-| Worker | Model for implementation | Primary ownership | Required proof |
-| --- | --- | --- | --- |
-| Security owner | GPT-5.6 Sol | Threat model, scope/role policy, exact-action approvals, demo broker boundary, execution verification, abuse tests; reviews crypto/MCP/sync designs | Unauthorized, stale, replayed, changed-target, and cross-scope operations rejected; allowed action independently verified |
-| Domain, data, and initial response owner | GPT-5.6 Sol | Shared schemas, graph evaluation, persistence, migrations, fixture data, event outbox, initial fallback transitions | Deterministic impact explanations, alternatives/unknowns/cycles, isolation, restart persistence |
-| Communications owner, from the start | GPT-5.6 Sol | Three local peers, queue/envelope handling, actual relay/receipt/restart behavior; optional native phone spike | Actual encrypted logical-peer forwarding, replay/dedup/expiry checks, truthful receipts; physical three-device mesh explicitly unverified |
-| Response and MCP owner, next assignment | GPT-5.6 Sol | Incident/task/fallback integration, service composition, MCP adapter, bounded product-agent runtime | Real MCP reads/proposal, verified fallback state, no approval or execution bypass |
-| Integration/adversarial verifier, later wave | GPT-5.6 Sol | Cross-module failure cases, repeatable scenario/reset, evidence capture | Full scenario survives restart; broken/denied paths stay truthful |
+| Worker                                       | Model for implementation | Primary ownership                                                                                                                                   | Required proof                                                                                                                            |
+| -------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Security owner                               | GPT-5.6 Sol              | Threat model, scope/role policy, exact-action approvals, demo broker boundary, execution verification, abuse tests; reviews crypto/MCP/sync designs | Unauthorized, stale, replayed, changed-target, and cross-scope operations rejected; allowed action independently verified                 |
+| Domain, data, and initial response owner     | GPT-5.6 Sol              | Shared schemas, graph evaluation, persistence, migrations, fixture data, event outbox, initial fallback transitions                                 | Deterministic impact explanations, alternatives/unknowns/cycles, isolation, restart persistence                                           |
+| Communications owner, from the start         | GPT-5.6 Sol              | Three local peers, queue/envelope handling, actual relay/receipt/restart behavior; optional native phone spike                                      | Actual encrypted logical-peer forwarding, replay/dedup/expiry checks, truthful receipts; physical three-device mesh explicitly unverified |
+| Response and MCP owner, next assignment      | GPT-5.6 Sol              | Incident/task/fallback integration, service composition, MCP adapter, bounded product-agent runtime                                                 | Real MCP reads/proposal, verified fallback state, no approval or execution bypass                                                         |
+| Integration/adversarial verifier, later wave | GPT-5.6 Sol              | Cross-module failure cases, repeatable scenario/reset, evidence capture                                                                             | Full scenario survives restart; broken/denied paths stay truthful                                                                         |
 
 These are responsibilities across waves, not five workers running simultaneously. The user confirmed both response and mesh are mandatory, so the first three implementation slots are security, domain/response, and communications. Keep the security owner dedicated throughout. Reuse the domain owner's slot for response/MCP once its core stabilizes; use a completed slot for integration verification. Research assignments do not grant broad coding authorization.
 
@@ -35,11 +37,11 @@ These are responsibilities across waves, not five workers running simultaneously
 
 If implementation resumes, keep single-writer ownership and use explicit `gpt-5.6-sol` for every worker:
 
-| Owner | Bounded assignment | Acceptance evidence |
-| --- | --- | --- |
-| Canvas workflow owner | Infinite canvas with typed nodes, labeled edges, node/edge input, failure-focused view, and contextual owners/tasks/backup plans | Real end-to-end fictional fixture; full graph preserved; no polished-design expansion |
+| Owner                          | Bounded assignment                                                                                                                                                                                             | Acceptance evidence                                                                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canvas workflow owner          | Infinite canvas with typed nodes, labeled edges, node/edge input, failure-focused view, and contextual owners/tasks/backup plans                                                                               | Real end-to-end fictional fixture; full graph preserved; no polished-design expansion                                                             |
 | Photon/model integration owner | Configurable model adapter plus Photon round trip using extensive API interaction; scoped alert, human question, redacted read-only tool answer, check-in, evidence-linked handoff, and visible delivery state | Captured bidirectional human conversation; local correlation state and idempotent retry; no one-way-alert substitution or approval/execution tool |
-| Security owner | Treat inbound content as untrusted; review allowlisted fictional sender binding, replay/rate bounds, message-to-evidence binding, redaction, scope, and authority separation | Adversarial tests show a phone number or message cannot approve, grant roles, widen scope, or issue execution commands |
+| Security owner                 | Treat inbound content as untrusted; review allowlisted fictional sender binding, replay/rate bounds, message-to-evidence binding, redaction, scope, and authority separation                                   | Adversarial tests show a phone number or message cannot approve, grant roles, widen scope, or issue execution commands                            |
 
 The lead owns coordination of canvas/fixture work, sponsor-rule verification, integration review, and truthful submission language; bounded implementation workers own the code so the lead remains responsive. Preserve the frozen contracts until a reviewed change is necessary. A node connection, drag/drop interaction, role label, message, or model response must never create authority; reuse the server policy and exact-action approval flow. Run the Photon spike before UI/model work consumes the day. Timebox its go/no-go to a working round trip within 60 minutes and the first $5-$10 only if spending is separately authorized; otherwise select NMC² + NVIDIA. This documentation assignment does not create accounts, spend money, or claim the spike passed.
 
@@ -153,16 +155,16 @@ Proposed run states: `queued → running → proposed | no_action | failed | tim
 
 The implemented stdio server exposes exactly eight tools: `get_incident`, `get_incident_timeline`, `get_dependencies`, `analyze_incident_impact`, `simulate_containment`, `list_fallback_plans`, `list_response_tasks`, and `submit_response_proposal`. The official client/server 2.4.0 SDKs negotiate modern MCP `2026-07-28` in the actual smoke test. Other tools in the broader table below remain planned. The scripted demo uses deterministic proposal input; the client bridge also allows the lead coding agent to reason over actual MCP responses without pretending a deployed autonomous model provider exists.
 
-| Tool | Permission and behavior |
-| --- | --- |
-| `get_incident` / `get_incident_timeline` | Scoped read; redact unauthorized fields |
-| `get_dependencies` / `get_critical_operations` | Scoped, bounded graph queries; no raw SQL |
-| `analyze_incident_impact` | Deterministic calculation against a known revision |
-| `simulate_containment` | Snapshot-only; cannot create an execution |
-| `list_fallback_plans` / `list_response_tasks` | Scoped reads with evidence and prerequisite states |
-| `submit_response_proposal` | Persist a schema-validated proposal; does not approve it or create a broker command |
-| `draft_incident_announcement` | Return a draft linked to evidence; no implicit delivery |
-| `get_execution_status` | Read-only, authorized execution/verification facts |
+| Tool                                           | Permission and behavior                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `get_incident` / `get_incident_timeline`       | Scoped read; redact unauthorized fields                                             |
+| `get_dependencies` / `get_critical_operations` | Scoped, bounded graph queries; no raw SQL                                           |
+| `analyze_incident_impact`                      | Deterministic calculation against a known revision                                  |
+| `simulate_containment`                         | Snapshot-only; cannot create an execution                                           |
+| `list_fallback_plans` / `list_response_tasks`  | Scoped reads with evidence and prerequisite states                                  |
+| `submit_response_proposal`                     | Persist a schema-validated proposal; does not approve it or create a broker command |
+| `draft_incident_announcement`                  | Return a draft linked to evidence; no implicit delivery                             |
+| `get_execution_status`                         | Read-only, authorized execution/verification facts                                  |
 
 No initial tool grants approval, changes roles/policy, runs arbitrary commands, supplies arbitrary URLs to a connector, controls Docker, or bypasses the execution service. Add routine task mutation or message-sending tools only when explicit product policy and scope enforcement are implemented.
 

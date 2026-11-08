@@ -121,6 +121,14 @@ export type IncidentTask = {
   nodeIds: NodeId[];
   status: "assigned" | "acknowledged" | "investigating" | "blocked" | "done";
   revision: number;
+  hasPreparedPrompt?: boolean;
+  assignmentPlanId?: string;
+  provenance?: {
+    mode: "live" | "fallback";
+    provider: string;
+    model: string;
+    reason?: string;
+  };
 };
 
 export type Message = {

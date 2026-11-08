@@ -30,6 +30,8 @@ import {
   setupView,
   analysisMarkup,
   completedCheckSteps,
+  assignmentPlanMarkup,
+  assignmentProvenanceMarkup,
 } from "./panels.js";
 const app = document.querySelector("#app"),
   toastEl = document.querySelector("#toast");
@@ -48,6 +50,7 @@ const state = {
   coverage: {},
   drafts: {},
   results: {},
+  assignmentRequests: {},
   sidebar: false,
   replay: null,
 };
@@ -346,6 +349,7 @@ function resetSessionState() {
     coverage: {},
     drafts: {},
     results: {},
+    assignmentRequests: {},
     sidebar: false,
   });
   toastEl.textContent = "";
@@ -443,6 +447,11 @@ function refreshLive() {
     return;
   if (canvas) {
     canvas.setData(items("nodes").map(enrichNode), items("edges"));
+    liveRefreshPending = deferredChrome || deferredFocus;
+    return;
+  }
+  if (document.querySelector("#incident-tasks")) {
+    refreshIncidentTasks(false);
     liveRefreshPending = deferredChrome || deferredFocus;
     return;
   }
@@ -680,13 +689,123 @@ function incidentOverview(i, a) {
       "",
     )}</article>${commander(i) ? `<article class="card"><h3>Incident priority</h3><form id="priority-form">${picker("Priority", "priority", ["low", "medium", "high", "critical"], i.priority || i.severity || "high")}<button type="submit">Save priority</button><p class="form-error"></p></form></article>` : ""}</aside></div>`;
 }
-function tasksView(i, tasks) {
+function incidentVolunteer(i, memberId) {
+  return items("assignmentVolunteers").find(
+    (v) =>
+      v.incidentId === i.id &&
+      v.memberId === memberId &&
+      Date.parse(v.expiresAt) > Date.now(),
+  );
+}
+function taskAvailability(i, ownerId) {
+  if (ownerId !== state.data.user.id && !commander(i)) return "";
+  const member = items("members").find((m) => m.id === ownerId);
+  const consent =
+    (ownerId === state.data.user.id || commander(i)) &&
+    incidentVolunteer(i, ownerId);
+  return consent &&
+    ["off_hours", "available", "on_call"].includes(member?.availability)
+    ? "Available for this incident"
+    : human(member?.availability || "Availability unknown");
+}
+function incidentAssignmentPlannerMarkup(i) {
+  if (!commander(i)) return "";
+  if (i.status === "resolved")
+    return '<section class="task-followup-note"><b>Assignment planning is closed</b><span>This incident is resolved. You can still edit saved follow-up tasks and open their prompts.</span></section>';
+  return assignmentPlanMarkup(
+    i.id,
+    state.assignmentRequests[i.id],
+    items("members"),
+    items("nodes"),
+  );
+}
+function savedTasksMarkup(i, tasks) {
   const done = tasks.filter((t) => t.status === "done").length;
   const followups = i.status === "resolved" && done < tasks.length;
   const resolutionVerified =
     state.data.responseByIncident?.[i.id]?.resolution?.verified === true;
-  return `${followups ? `<div class="task-followup-note"><b>${resolutionVerified ? "Immediate issue verified resolved" : "Incident resolved"}</b><span>${tasks.length - done} follow-up ${tasks.length - done === 1 ? "task remains" : "tasks remain"} open. Assignees still need to complete this work.</span></div>` : ""}<div class="task-progress"><span><b>${done}</b> / ${tasks.length} tasks completed</span><div class="progress-track"><i style="width:${tasks.length ? (done / tasks.length) * 100 : 0}%"></i></div></div><div class="tasks-header"><div><h2>Response tasks</h2><p>Assignments and coding-agent prompts for this incident.</p></div>${commander(i) ? '<button class="primary" data-add-task>Create task</button>' : ""}</div><div class="task-grid">${tasks.map((t) => `<article class="card task-card"><span class="pill">${h(t.status === "investigating" ? "In progress" : human(t.status))}</span><h3>${h(t.title)}</h3><p>Assigned to <b>${h(items("members").find((m) => m.id === t.ownerId)?.name || "Unassigned")}</b></p><small class="assignee-status">${h(human(items("members").find((m) => m.id === t.ownerId)?.availability || "Availability unknown"))}</small><div class="button-row">${t.ownerId === state.data.user.id || commander(i) ? `<button class="primary" data-brief="${h(t.id)}">Agent prompt</button><button data-edit-task="${h(t.id)}">Edit task</button>` : ""}</div></article>`).join("") || '<div class="empty"><h3>No tasks assigned yet</h3><p>Create a task for a responder to begin.</p></div>'}</div>`;
+  return `${followups ? `<div class="task-followup-note"><b>${resolutionVerified ? "Immediate issue verified resolved" : "Incident resolved"}</b><span>${tasks.length - done} follow-up ${tasks.length - done === 1 ? "task remains" : "tasks remain"} open. Assignees still need to complete this work.</span></div>` : ""}<div class="task-progress"><span><b>${done}</b> / ${tasks.length} tasks completed</span><div class="progress-track"><i style="width:${tasks.length ? (done / tasks.length) * 100 : 0}%"></i></div></div><div class="tasks-header"><div><h2>Saved response tasks</h2><p>Open your assignment and copy its coding-agent prompt.</p></div>${commander(i) ? "<button data-add-task>Create task</button>" : ""}</div><div class="task-grid">${tasks.map((t) => `<article class="card task-card"><span class="pill">${h(t.status === "investigating" ? "In progress" : human(t.status))}</span><h3>${h(t.title)}</h3><p>Assigned to <b>${h(items("members").find((m) => m.id === t.ownerId)?.name || "Unassigned")}</b></p>${taskAvailability(i, t.ownerId) ? `<small class="assignee-status">${h(taskAvailability(i, t.ownerId))}</small>` : ""}${t.hasPreparedPrompt ? `<p class="prepared-prompt-note">Prepared prompt saved</p>${t.provenance ? assignmentProvenanceMarkup(t.provenance) : ""}` : ""}<div class="button-row">${t.ownerId === state.data.user.id || commander(i) ? `<button class="primary" data-brief="${h(t.id)}">Agent prompt</button><button data-edit-task="${h(t.id)}">Edit task</button>` : ""}</div></article>`).join("") || `<div class="empty"><h3>No tasks assigned yet</h3><p>${i.status === "resolved" ? "This resolved incident has no saved tasks." : commander(i) ? "Plan assignments above, or create a task manually." : "Your manager can prepare and send assignments for this incident."}</p></div>`}</div>`;
 }
+function volunteerMarkup(i) {
+  if (!i.memberIds?.includes(state.data.user.id) || i.status === "resolved")
+    return "";
+  const consent = incidentVolunteer(i, state.data.user.id);
+  return `<aside class="assignment-volunteer"><div><b>${consent ? "You joined this response" : "Available to help outside your hours?"}</b><p>${consent ? `Your incident-only availability lasts until ${h(new Date(consent.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}.` : "Choose to receive assignments for this incident for one hour. Your other working hours and notification preferences stay the same."}</p></div>${consent ? '<span class="pill green">Available for this incident</span>' : `<button data-volunteer="${h(i.id)}">Join response for 1 hour</button>`}</aside>`;
+}
+function tasksView(i, tasks) {
+  return `<div id="incident-tasks" data-incident-id="${h(i.id)}"><div id="assignment-planner-region">${incidentAssignmentPlannerMarkup(i)}</div><div id="assignment-volunteer-region">${volunteerMarkup(i)}</div><section id="saved-tasks">${savedTasksMarkup(i, tasks)}</section></div>`;
+}
+function refreshIncidentTasks(includePlan = true) {
+  const i = currentIncident(),
+    root = document.querySelector("#incident-tasks");
+  if (!i || root?.dataset.incidentId !== i.id) return;
+  const tasks = items("tasks").filter((t) => t.incidentId === i.id);
+  const replaceIfChanged = (selector, markup) => {
+    const el = root.querySelector(selector);
+    if (el && el._taskMarkup !== markup) {
+      el.innerHTML = markup;
+      el._taskMarkup = markup;
+    }
+  };
+  if (includePlan || !commander(i) || i.status === "resolved")
+    replaceIfChanged(
+      "#assignment-planner-region",
+      incidentAssignmentPlannerMarkup(i),
+    );
+  replaceIfChanged("#assignment-volunteer-region", volunteerMarkup(i));
+  replaceIfChanged("#saved-tasks", savedTasksMarkup(i, tasks));
+  document
+    .querySelector('[data-incident-tab="tasks"]')
+    ?.replaceChildren(`Tasks (${tasks.length})`);
+}
+async function planAssignments(incidentId) {
+  if (
+    items("incidents").find((i) => i.id === incidentId)?.status === "resolved"
+  )
+    return;
+  const previous = state.assignmentRequests[incidentId];
+  if (["planning", "applying"].includes(previous?.status)) return;
+  const request = { status: "planning" };
+  state.assignmentRequests[incidentId] = request;
+  refreshIncidentTasks();
+  try {
+    const r = await action("assignment.plan", { incidentId });
+    request.plan = r.result;
+    request.status = "review";
+  } catch (error) {
+    if (error.staleSession) return;
+    request.status = "error";
+    request.error = explainError(error);
+  }
+  refreshIncidentTasks();
+}
+async function applyAssignments(incidentId) {
+  if (
+    items("incidents").find((i) => i.id === incidentId)?.status === "resolved"
+  )
+    return;
+  const request = state.assignmentRequests[incidentId];
+  if (!request?.plan || ["applying", "applied"].includes(request.status))
+    return;
+  request.status = "applying";
+  request.error = "";
+  refreshIncidentTasks();
+  try {
+    const r = await action("assignment.apply", { planId: request.plan.planId });
+    request.status = "applied";
+    request.taskIds = r.result.taskIds;
+    toast("Assignments and prompts saved for each responder");
+  } catch (error) {
+    if (error.staleSession) return;
+    request.status = "review";
+    request.invalid = error.status === 409 || error.status === 410;
+    request.error = request.invalid
+      ? "This proposal is no longer current. Plan assignments again to check current access, hours, and work."
+      : explainError(error);
+  }
+  refreshIncidentTasks();
+}
+
 function responseProof(observed) {
   const containment = observed?.containment,
     fallback = observed?.fallback,
@@ -1708,7 +1827,7 @@ async function showBrief(id) {
   showOverlay(
     sheet(
       "Agent prompt",
-      `<button class="back-button" data-close>← Back to tasks</button><p>Review this scoped prompt, then copy it to your coding agent.</p><div class="button-row"><button type="button" class="primary" id="copy-brief" ${prompt ? "" : "disabled"}>${icon("copy")} Copy prompt</button><button type="button" id="select-brief" ${prompt ? "" : "disabled"}>Select prompt text</button></div><p id="brief-copy-status" class="copy-status" role="status">If browser copy is unavailable, select the text and press ${copyShortcut}.</p><label class="sr-only" for="agent-prompt-text">Agent prompt text</label><textarea id="agent-prompt-text" class="agent-prompt-editor" readonly spellcheck="false" aria-label="Agent prompt text">${h(prompt || "No prompt returned.")}</textarea><details><summary>Prompt provenance</summary><p>Incident snapshot revision ${h(brief.snapshotRevision)}</p><code>${h(brief.id)}</code></details>`,
+      `<button class="back-button" data-close>← Back to tasks</button><p>${items("tasks").find((t) => t.id === id)?.hasPreparedPrompt ? "This prepared prompt was saved with your assignment." : "Review this scoped prompt."} Copy it to your coding agent when you are ready to begin. No external agent has been started.</p>${brief.provenance ? assignmentProvenanceMarkup(brief.provenance) : ""}<div class="button-row"><button type="button" class="primary" id="copy-brief" ${prompt ? "" : "disabled"}>${icon("copy")} Copy prompt</button><button type="button" id="select-brief" ${prompt ? "" : "disabled"}>Select prompt text</button></div><p id="brief-copy-status" class="copy-status" role="status">If browser copy is unavailable, select the text and press ${copyShortcut}.</p><label class="sr-only" for="agent-prompt-text">Agent prompt text</label><textarea id="agent-prompt-text" class="agent-prompt-editor" readonly spellcheck="false" aria-label="Agent prompt text">${h(prompt || "No prompt returned.")}</textarea><details><summary>Prompt provenance</summary><p>Incident snapshot revision ${h(brief.snapshotRevision)}</p><code>${h(brief.id)}</code></details>`,
       {
         subtitle:
           items("tasks").find((t) => t.id === id)?.title || "Task handoff",
@@ -2074,7 +2193,14 @@ app.addEventListener("click", async (e) => {
       showOverlay(importSheet(d.import));
     } else if (d.downloadExample) downloadExample(d.downloadExample);
     else if ("editIncidentScope" in d) editIncidentScope();
-    else if ("addTask" in d) taskForm();
+    else if (d.planAssignments) await planAssignments(d.planAssignments);
+    else if (d.applyAssignments) await applyAssignments(d.applyAssignments);
+    else if (d.volunteer) {
+      b.disabled = true;
+      await action("assignment.volunteer", { incidentId: d.volunteer });
+      refreshIncidentTasks(false);
+      toast("You are available for this incident for one hour");
+    } else if ("addTask" in d) taskForm();
     else if (d.editTask)
       taskForm(items("tasks").find((t) => t.id === d.editTask));
     else if (d.brief) {

@@ -1,0 +1,111 @@
+{
+  "recordedAt": "2026-11-08T15:05:32.752Z",
+  "kind": "Exact saved QA scope, live Nemotron planning and two parallel recipient drafts",
+  "elapsedMs": 3797,
+  "originalScopeIssues": [
+    {
+      "ownerId": "employee-noah",
+      "nodeId": "job-api",
+      "issue": "known_node_outside_recipient_source_scope"
+    },
+    {
+      "ownerId": "employee-priya",
+      "nodeId": "training-dispatch",
+      "issue": "known_node_outside_recipient_source_scope"
+    }
+  ],
+  "requests": [
+    {
+      "index": 1,
+      "elapsedMs": 1180,
+      "httpStatus": 200,
+      "finishReason": "stop",
+      "hadToolCalls": false,
+      "responseSha256": "7a6a46850c7c430eed68cb662d6da063dd4cebaad2a07b6a706442ff87f2fb6d"
+    },
+    {
+      "index": 2,
+      "elapsedMs": 2507,
+      "httpStatus": 200,
+      "finishReason": "stop",
+      "hadToolCalls": false,
+      "responseSha256": "52e6985c0a847d80988eccea5f3cefa935ca0aa2192aa813664ffed74c4e88b6"
+    },
+    {
+      "index": 3,
+      "elapsedMs": 2610,
+      "httpStatus": 200,
+      "finishReason": "stop",
+      "hadToolCalls": false,
+      "responseSha256": "3b729d86045a0152136d0628fca6b6a35e8ffb5b37e610b272c11931d462b3b7"
+    }
+  ],
+  "result": {
+    "mode": "live",
+    "provider": "Brev / vLLM",
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+    "summary": "2 assignments prepared for review. Live model planning and recipient drafting completed. 3 of 5 incident systems have proposed work; 0 already have unfinished work. Not covered: GPU Job API, Dallas Training Queue. These systems have no eligible responder with permitted repository paths; review source mapping and availability. Applying assignments does not execute code or confirm a repair.",
+    "tasks": [
+      {
+        "ownerId": "employee-noah",
+        "nodeIds": ["retry-route", "tenant-auth"],
+        "sourcePaths": [
+          "fixtures/northstar/retry-service.ts",
+          "fixtures/northstar/retry-service.test.ts"
+        ],
+        "title": "Investigate Tenant Authorization in Job Retry Endpoint",
+        "provenance": {
+          "mode": "live",
+          "provider": "Brev / vLLM",
+          "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+        },
+        "promptSha256": "a5e3a92f00c190df54017feb8b5b89df9aac65604a0e9014daf2fb11e78c5e82"
+      },
+      {
+        "ownerId": "employee-priya",
+        "nodeIds": ["training-catalog"],
+        "sourcePaths": ["apps/tether/seed.ts"],
+        "title": "Investigate Tenant Authorization in Engineering Job Requests",
+        "provenance": {
+          "mode": "live",
+          "provider": "Brev / vLLM",
+          "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+        },
+        "promptSha256": "3291068701e5418ecd7e18447ba0bed1f67b4f687adc919511cefd144152f061"
+      }
+    ],
+    "steps": [
+      {
+        "stage": "scope",
+        "status": "observed",
+        "detail": "3 currently eligible responders supplied by the server."
+      },
+      {
+        "stage": "scope-normalization",
+        "status": "observed",
+        "detail": "Server derived permitted repository paths for every assignment, removed 2 duplicate or out-of-scope system proposals, and merged 0 repeated responder proposals. This creates no new access."
+      },
+      {
+        "stage": "planner",
+        "status": "live",
+        "detail": "Model selected 2 bounded assignments."
+      },
+      {
+        "stage": "draft:employee-noah",
+        "status": "live",
+        "detail": "Recipient-scoped model prompt prepared."
+      },
+      {
+        "stage": "draft:employee-priya",
+        "status": "live",
+        "detail": "Recipient-scoped model prompt prepared."
+      },
+      {
+        "stage": "coverage",
+        "status": "observed",
+        "detail": "3 of 5 incident systems have proposed work; 0 already have unfinished work. Not covered: GPU Job API, Dallas Training Queue. These systems have no eligible responder with permitted repository paths; review source mapping and availability."
+      }
+    ]
+  },
+  "note": "No headers, credentials, raw prompts, or private source contents retained. This direct runtime probe is separate from the subsequent actual main-app browser delivery."
+}

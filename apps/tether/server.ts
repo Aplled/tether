@@ -14,7 +14,13 @@ import { promisify } from "node:util";
 import { AuthError, AuthService } from "./auth.ts";
 import { analyzeDemo } from "../demo-web/agent.ts";
 import { CompanyError, TetherCompanyStore } from "./company.ts";
-import { briefIsStale, generateTaskBrief, type TaskBrief } from "./handoffs.ts";
+import { planIncidentAssignments } from "./assignments.ts";
+import {
+  briefIsStale,
+  generateTaskBrief,
+  taskDefinitionDigest,
+  type TaskBrief,
+} from "./handoffs.ts";
 import {
   employeeFromImport,
   ImportService,
@@ -222,6 +228,7 @@ export async function startTetherServer(
   auth.bootstrapPresentationAccounts();
   const imports = new ImportService(() => company.allState());
   const briefs = new Map<string, TaskBrief>();
+  const activeAssignmentPlans = new Set<string>();
   const responseChecks = new Map<
     string,
     { generation: string; fallback?: unknown; resolution?: unknown }
@@ -307,6 +314,20 @@ export async function startTetherServer(
       ),
     );
   }
+  function allowed(
+    ctx: AuthContext,
+    capability: Capability,
+    kind: ResourceKind,
+    id: string,
+  ): boolean {
+    try {
+      allow(ctx, capability, kind, id);
+      return true;
+    } catch (error) {
+      if (error instanceof PermissionError) return false;
+      throw error;
+    }
+  }
   function projectIncident(
     ctx: AuthContext,
     incident: Incident,
@@ -352,6 +373,206 @@ export async function startTetherServer(
         0
       );
     });
+  }
+  function assignmentContext(ctx: AuthContext, incidentId: string) {
+    allow(ctx, "incident:assign", "incident", incidentId);
+    const state = company.allState();
+    const incident = state.incidents.find((entry) => entry.id === incidentId);
+    if (!incident || incident.status === "resolved")
+      throw new HttpError(
+        409,
+        "assignment_stale",
+        "The incident is no longer open",
+      );
+    const readable = readableNodeIds(ctx, incident, state);
+    const candidates: Parameters<
+      typeof planIncidentAssignments
+    >[0]["candidates"] = [];
+    const skipped: Array<{ ownerId: string; reason: string }> = [];
+    const consents = incident.memberIds.map((id) =>
+      company.assignmentVolunteer(incidentId, id),
+    );
+    const at = new Date();
+    for (const memberId of incident.memberIds) {
+      const member = state.members.find((entry) => entry.id === memberId);
+      const consent = company.assignmentVolunteer(incidentId, memberId);
+      const presence = member ? effectiveAvailability(member, at) : "away";
+      const availability =
+        presence === "off_hours" && consent && new Date(consent.expiresAt) > at
+          ? "on_call"
+          : presence;
+      let reason = !member?.active
+        ? "Account is inactive"
+        : !["available", "on_call"].includes(availability)
+          ? `Currently ${availability.replaceAll("_", " ")}; explicit availability is required`
+          : "";
+      const refs = state.repositories.filter(
+        (ref) =>
+          readable.has(ref.nodeId) &&
+          allowed(ctx, "repository:read", "repository", ref.id) &&
+          Boolean(
+            member &&
+            roleTemplate(member.roleTemplate).has("repository:read") &&
+            roleTemplate(member.roleTemplate).has("graph:read"),
+          ) &&
+          company.permissionGrants(
+            memberId,
+            { kind: "node", id: ref.nodeId },
+            "graph:read",
+          ).length &&
+          company.permissionGrants(
+            memberId,
+            { kind: "repository", id: ref.id },
+            "repository:read",
+          ).length,
+      );
+      if (!reason && !refs.length)
+        reason = "No authorized repository mapping in this incident";
+      if (reason || !member) {
+        skipped.push({ ownerId: memberId, reason });
+        continue;
+      }
+      candidates.push({
+        id: member.id,
+        name: member.name,
+        title: member.title,
+        nodeIds: [...new Set(refs.map((ref) => ref.nodeId))],
+        sourcePaths: [...new Set(refs.map((ref) => ref.path))],
+        nodeSourcePaths: Object.fromEntries(
+          [...new Set(refs.map((ref) => ref.nodeId))].map((nodeId) => [
+            nodeId,
+            refs.filter((ref) => ref.nodeId === nodeId).map((ref) => ref.path),
+          ]),
+        ),
+        availability,
+        active: true,
+      });
+    }
+    const binding = createHash("sha256")
+      .update(
+        JSON.stringify({
+          actor: ctx.employeeId,
+          policy: ctx.policyRevision,
+          incident,
+          semantic: state.organization.semanticRevision,
+          members: state.members,
+          grants: state.grants,
+          repositories: state.repositories,
+          delegations: state.delegations,
+          tasks: state.tasks.filter((task) => task.incidentId === incidentId),
+          messages: state.messages.filter(
+            (message) => message.incidentId === incidentId,
+          ),
+          candidates,
+          consents,
+        }),
+      )
+      .digest("hex");
+    return { state, incident, readable, candidates, skipped, binding };
+  }
+  function checkBriefAccess(
+    ctx: AuthContext,
+    task: CompanyState["tasks"][number],
+    paths: string[],
+    state: CompanyState,
+  ) {
+    allow(ctx, "task:read", "task", task.id);
+    if (task.ownerId !== ctx.employeeId)
+      allow(ctx, "incident:assign", "incident", task.incidentId);
+    const incident = state.incidents.find(
+      (entry) => entry.id === task.incidentId,
+    );
+    if (
+      !company.member(task.ownerId)?.active ||
+      !roleTemplate(company.member(task.ownerId)!.roleTemplate).has(
+        "repository:read",
+      ) ||
+      !incident?.memberIds.includes(task.ownerId)
+    )
+      throw new HttpError(
+        403,
+        "source_forbidden",
+        "The assignee no longer has incident access",
+      );
+    for (const path of paths) {
+      const refs = state.repositories.filter(
+        (ref) => ref.path === path && task.nodeIds.includes(ref.nodeId),
+      );
+      if (
+        !refs.some(
+          (ref) =>
+            allowed(ctx, "repository:read", "repository", ref.id) &&
+            allowed(ctx, "graph:read", "node", ref.nodeId) &&
+            [ctx.employeeId, task.ownerId].every(
+              (memberId) =>
+                company.permissionGrants(
+                  memberId,
+                  { kind: "node", id: ref.nodeId },
+                  "graph:read",
+                ).length &&
+                company.permissionGrants(
+                  memberId,
+                  { kind: "repository", id: ref.id },
+                  "repository:read",
+                ).length,
+            ),
+        )
+      )
+        throw new HttpError(
+          403,
+          "source_forbidden",
+          "Current repository permission is required for this prompt",
+        );
+    }
+  }
+  function projectTask(
+    ctx: AuthContext,
+    task: CompanyState["tasks"][number],
+    state: CompanyState,
+  ) {
+    const incident = state.incidents.find(
+      (entry) => entry.id === task.incidentId,
+    )!;
+    const readable = readableNodeIds(ctx, incident, state);
+    let title = task.title;
+    if (task.hasPreparedPrompt) {
+      const brief = company.assignmentBrief(task.id);
+      try {
+        if (
+          !brief ||
+          task.nodeIds.some((id) => !allowed(ctx, "graph:read", "node", id))
+        )
+          throw new HttpError(
+            403,
+            "source_forbidden",
+            "Assigned source scope is restricted",
+          );
+        checkBriefAccess(ctx, task, brief.permittedPaths ?? [], state);
+      } catch (error) {
+        if (
+          !(error instanceof PermissionError) &&
+          !(error instanceof HttpError)
+        )
+          throw error;
+        title = "Assigned investigation";
+      }
+    }
+    return {
+      ...task,
+      title,
+      nodeIds: task.nodeIds.filter((id) => readable.has(id)),
+    };
+  }
+  function projectNotification(
+    notification: CompanyState["notifications"][number],
+  ) {
+    // Legacy records may contain a former task title. Never infer access by matching mutable text.
+    return notification.kind === "assignment"
+      ? {
+          ...notification,
+          text: "An investigation task was assigned. Open the incident to review your work.",
+        }
+      : notification;
   }
   function visibleState(ctx: AuthContext): ViewState {
     const state = company.allState();
@@ -590,16 +811,7 @@ export async function startTetherServer(
         .find((item) => incidentIds.has(item.incidentId)) ?? null;
     const visibleTasks = state.tasks
       .filter((task) => incidentIds.has(task.incidentId))
-      .map((task) => {
-        const incident = state.incidents.find(
-          (item) => item.id === task.incidentId,
-        )!;
-        const readable = readableNodeIds(ctx, incident, state);
-        return {
-          ...task,
-          nodeIds: task.nodeIds.filter((id) => readable.has(id)),
-        };
-      });
+      .map((task) => projectTask(ctx, task, state));
     const visibleTaskIds = new Set(visibleTasks.map((task) => task.id));
     const visibleMessages = state.messages.filter((message) => {
       if (!incidentIds.has(message.incidentId)) return false;
@@ -641,10 +853,18 @@ export async function startTetherServer(
       workspaces,
       conversations,
       tasks: visibleTasks,
-      messages: visibleMessages,
-      notifications: state.notifications.filter(
-        (notification) => notification.memberId === ctx.employeeId,
+      assignmentVolunteers: rawIncidents.flatMap((incident) =>
+        incident.memberIds.flatMap((id) => {
+          const consent = company.assignmentVolunteer(incident.id, id);
+          return consent && Date.parse(consent.expiresAt) > Date.now()
+            ? [consent]
+            : [];
+        }),
       ),
+      messages: visibleMessages,
+      notifications: state.notifications
+        .filter((notification) => notification.memberId === ctx.employeeId)
+        .map(projectNotification),
       grants: isAdmin ? state.grants : [],
       delegations: isAdmin
         ? state.delegations
@@ -1302,6 +1522,222 @@ export async function startTetherServer(
         status: "acknowledged",
       });
     }
+    if (type === "assignment.volunteer") {
+      const incidentId = string(payload.incidentId, "incidentId", 100);
+      allow(ctx, "incident:participate", "incident", incidentId);
+      return company.volunteerForAssignments(incidentId, ctx.employeeId);
+    }
+    if (type === "assignment.plan") {
+      const incidentId = string(payload.incidentId, "incidentId", 100);
+      const initial = assignmentContext(ctx, incidentId);
+      if (activeAssignmentPlans.has(incidentId))
+        throw new HttpError(
+          409,
+          "assignment_planning_in_progress",
+          "Planning is already in progress for this incident. Wait for the current plan.",
+        );
+      if (activeAssignmentPlans.size >= 2)
+        throw new HttpError(
+          429,
+          "assignment_planning_busy",
+          "Two assignment plans are already in progress. Try again when one finishes.",
+        );
+      activeAssignmentPlans.add(incidentId);
+      try {
+        const mcp = await createCompanyMcpSession({
+          organizationId: "northstar",
+          incidentId,
+          invoke: async (name, _args, signal) => {
+            signal.throwIfAborted();
+            const current = assignmentContext(
+              auth.authenticate(token),
+              incidentId,
+            );
+            if (current.binding !== initial.binding)
+              throw new HttpError(
+                409,
+                "assignment_stale",
+                "Assignment context changed during evidence checks",
+              );
+            if (name === "get_incident")
+              return projectIncident(ctx, current.incident, current.state);
+            if (name === "analyze_incident_impact")
+              return company.impactScoped(current.readable);
+            if (name === "get_dependencies")
+              return {
+                nodes: current.state.nodes.filter((node) =>
+                  current.readable.has(node.id),
+                ),
+                edges: current.state.edges.filter(
+                  (edge) =>
+                    current.readable.has(edge.sourceId) &&
+                    current.readable.has(edge.targetId),
+                ),
+              };
+            if (name === "list_response_tasks")
+              return current.state.tasks
+                .filter((task) => task.incidentId === incidentId)
+                .map((task) =>
+                  projectTask(auth.authenticate(token), task, current.state),
+                )
+                .map(({ title, ownerId, nodeIds, status }) => ({
+                  title,
+                  ownerId,
+                  nodeIds: nodeIds.filter((id) => current.readable.has(id)),
+                  status,
+                }));
+            throw new Error("Tool not permitted for assignment evidence");
+          },
+        });
+        let evidence: unknown;
+        try {
+          evidence = {
+            protocolVersion: mcp.protocolVersion,
+            incident: await mcp.callTool("get_incident", {}),
+            dependencies: await mcp.callTool("get_dependencies", {}),
+            impact: await mcp.callTool("analyze_incident_impact", {}),
+            tasks: await mcp.callTool("list_response_tasks", {}),
+          };
+        } finally {
+          await mcp.close();
+        }
+        const result = await planIncidentAssignments({
+          incident: {
+            id: incidentId,
+            title: initial.incident.title,
+            observation: initial.incident.observation,
+            nodeIds: [...initial.readable],
+          },
+          semanticRevision: initial.state.organization.semanticRevision,
+          analysis: evidence,
+          nodes: initial.state.nodes.filter((node) =>
+            initial.readable.has(node.id),
+          ),
+          existingTasks: initial.state.tasks
+            .filter((task) => task.incidentId === incidentId)
+            .map((task) => projectTask(ctx, task, initial.state))
+            .map(({ title, ownerId, nodeIds, status }) => ({
+              title,
+              ownerId,
+              nodeIds: nodeIds.filter((id) => initial.readable.has(id)),
+              status,
+            })),
+          candidates: initial.candidates,
+        });
+        const current = assignmentContext(auth.authenticate(token), incidentId);
+        if (current.binding !== initial.binding)
+          throw new HttpError(
+            409,
+            "assignment_stale",
+            "People, source access, evidence or tasks changed while the plan was prepared. Plan again.",
+          );
+        result.skipped = [...initial.skipped, ...result.skipped];
+        result.steps.unshift({
+          stage: "checking_evidence",
+          status: "completed",
+          detail:
+            "Read the current incident, permitted dependencies, dependency impact and existing tasks through the authenticated MCP session.",
+        });
+        const planId = `assignment-${randomUUID()}`;
+        const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+        company.saveAssignmentPlan({
+          id: planId,
+          actorId: ctx.employeeId,
+          incidentId,
+          binding: initial.binding,
+          expiresAt,
+          result,
+        });
+        return { planId, incidentId, expiresAt, ...result };
+      } finally {
+        activeAssignmentPlans.delete(incidentId);
+      }
+    }
+    if (type === "assignment.apply") {
+      const planId = string(payload.planId, "planId", 100);
+      const tasks = company.applyAssignmentPlan(
+        planId,
+        (plan) => {
+          const live = auth.authenticate(token);
+          if (plan.actorId !== live.employeeId)
+            throw new HttpError(
+              403,
+              "forbidden",
+              "Only the manager who reviewed this plan can apply it",
+            );
+          const current = assignmentContext(live, plan.incidentId);
+          if (plan.taskIds) return; // Durable retries return the original delivery without new writes.
+          if (
+            Date.parse(plan.expiresAt) <= Date.now() ||
+            current.binding !== plan.binding
+          )
+            throw new HttpError(
+              409,
+              "assignment_stale",
+              "This plan expired or its people, evidence, tasks or access changed. Plan again.",
+            );
+          if (plan.result.tasks.length > 6)
+            throw new HttpError(400, "invalid_plan", "Too many assignments");
+          const recipients = new Set<string>();
+          for (const task of plan.result.tasks) {
+            const candidate = current.candidates.find(
+              (entry) => entry.id === task.ownerId,
+            );
+            if (
+              !candidate ||
+              recipients.has(task.ownerId) ||
+              !task.nodeIds.length ||
+              task.nodeIds.some((id) => !candidate.nodeIds.includes(id)) ||
+              !task.sourcePaths.length ||
+              task.sourcePaths.some(
+                (path) =>
+                  !candidate.sourcePaths.includes(path) ||
+                  !current.state.repositories.some(
+                    (ref) =>
+                      ref.path === path && task.nodeIds.includes(ref.nodeId),
+                  ),
+              ) ||
+              !task.prompt.trim() ||
+              task.prompt.length > 32_000
+            )
+              throw new HttpError(
+                409,
+                "assignment_stale",
+                "A recipient, system or source path is no longer eligible. Plan again.",
+              );
+            recipients.add(task.ownerId);
+          }
+        },
+        (task, index) => {
+          const plan = company.assignmentPlan(planId)!;
+          const draft = plan.result.tasks[index]!;
+          const brief = generateTaskBrief({
+            state: company.allState(),
+            task,
+            assignee: company.member(task.ownerId)!,
+            permittedPaths: draft.sourcePaths,
+            evidence: [],
+            unknowns: [],
+            tests: [],
+            acceptanceCriteria: [],
+          });
+          return {
+            ...brief,
+            id: `brief-${task.id}`,
+            text: draft.prompt,
+            provenance: draft.provenance,
+            taskDefinitionDigest: taskDefinitionDigest(task),
+          };
+        },
+      );
+      return {
+        planId,
+        taskIds: tasks.map((task) => task.id),
+        tasks: tasks.map((task) =>
+          projectTask(auth.authenticate(token), task, company.allState()),
+        ),
+      };
+    }
     if (type === "task.create") {
       allow(
         ctx,
@@ -1335,17 +1771,22 @@ export async function startTetherServer(
             "only the incident commander can reassign or retitle tasks",
           );
       }
-      return company.updateTask(id, number(payload.revision, "revision"), {
-        ...(payload.status
-          ? { status: string(payload.status, "status", 30) as any }
-          : {}),
-        ...(payload.ownerId
-          ? { ownerId: string(payload.ownerId, "ownerId", 100) }
-          : {}),
-        ...(payload.title
-          ? { title: string(payload.title, "title", 300) }
-          : {}),
-      });
+      const updated = company.updateTask(
+        id,
+        number(payload.revision, "revision"),
+        {
+          ...(payload.status
+            ? { status: string(payload.status, "status", 30) as any }
+            : {}),
+          ...(payload.ownerId
+            ? { ownerId: string(payload.ownerId, "ownerId", 100) }
+            : {}),
+          ...(payload.title
+            ? { title: string(payload.title, "title", 300) }
+            : {}),
+        },
+      );
+      return projectTask(ctx, updated, company.allState());
     }
     if (type === "message.send") {
       if (!body.idempotencyKey)
@@ -1370,9 +1811,8 @@ export async function startTetherServer(
       });
     }
     if (type === "notification.read")
-      return company.readNotification(
-        string(payload.id, "id", 120),
-        ctx.employeeId,
+      return projectNotification(
+        company.readNotification(string(payload.id, "id", 120), ctx.employeeId),
       );
     if (type === "delegation.save") {
       allow(ctx, "organization:admin", "organization", "northstar");
@@ -1446,10 +1886,7 @@ export async function startTetherServer(
           );
         const scopedTasks = current.tasks
           .filter((task) => task.incidentId === incidentId)
-          .map((task) => ({
-            ...task,
-            nodeIds: task.nodeIds.filter((id) => scopedNodeIds.has(id)),
-          }));
+          .map((task) => projectTask(live, task, current));
         const scopedTaskIds = new Set(scopedTasks.map((task) => task.id));
         if (name === "get_incident") {
           const projected = projectIncident(live, currentIncident, current);
@@ -1633,20 +2070,31 @@ export async function startTetherServer(
       allow(ctx, "task:read", "task", taskId);
       const state = company.allState(),
         task = state.tasks.find((t) => t.id === taskId);
-      if (
-        !task ||
-        (task.ownerId !== ctx.employeeId &&
-          !company.isOrganizationAdmin(ctx.employeeId))
-      )
+      if (!task)
         throw new HttpError(
           403,
           "forbidden",
           "task brief is restricted to its assignee and commander",
         );
+      if (task.ownerId !== ctx.employeeId)
+        allow(ctx, "incident:assign", "incident", task.incidentId);
       const assignee = company.member(task.ownerId)!;
+      const saved = company.assignmentBrief(taskId);
+      if (saved) {
+        checkBriefAccess(ctx, task, saved.permittedPaths ?? [], state);
+        if (briefIsStale(saved, state, task))
+          throw new HttpError(
+            409,
+            "brief_stale",
+            "The prepared prompt is stale. Review the current incident and prepare a new assignment.",
+          );
+        briefs.set(saved.id, saved);
+        return saved;
+      }
       const paths = state.repositories
         .filter((r) => task.nodeIds.includes(r.nodeId))
         .map((r) => r.path);
+      checkBriefAccess(ctx, task, paths, state);
       if (!paths.length)
         throw new HttpError(
           409,
@@ -1673,17 +2121,26 @@ export async function startTetherServer(
     }
     if (type === "brief.copy") {
       const id = string(payload.id, "id", 100),
-        brief = briefs.get(id);
+        brief =
+          briefs.get(id) ??
+          company
+            .allState()
+            .tasks.map((task) => company.assignmentBrief(task.id))
+            .find((entry) => entry?.id === id);
       if (!brief) throw new HttpError(404, "not_found", "brief not found");
       const state = company.allState(),
         task = state.tasks.find((t) => t.id === brief.taskId);
       if (!task || briefIsStale(brief, state, task))
         throw new HttpError(409, "brief_stale", "task brief is stale");
-      if (
-        task.ownerId !== ctx.employeeId &&
-        !company.isOrganizationAdmin(ctx.employeeId)
-      )
-        throw new HttpError(403, "forbidden", "task brief is restricted");
+      checkBriefAccess(
+        ctx,
+        task,
+        brief.permittedPaths ??
+          state.repositories
+            .filter((ref) => task.nodeIds.includes(ref.nodeId))
+            .map((ref) => ref.path),
+        state,
+      );
       return brief;
     }
     if (type === "response.prepare") {

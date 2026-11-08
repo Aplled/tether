@@ -37,6 +37,18 @@ import type {
   ResourceGrant,
 } from "./types.ts";
 import { roleTemplate } from "./permissions.ts";
+import type { TaskBrief } from "./handoffs.ts";
+import type { planIncidentAssignments } from "./assignments.ts";
+
+export type AssignmentPlanRecord = {
+  id: string;
+  actorId: string;
+  incidentId: string;
+  binding: string;
+  expiresAt: string;
+  result: Awaited<ReturnType<typeof planIncidentAssignments>>;
+  taskIds?: string[];
+};
 import type {
   Capability,
   MembershipSnapshot,
@@ -56,6 +68,9 @@ export class CompanyError extends Error {
 }
 
 type RecordKind =
+  | "assignment_plan"
+  | "assignment_brief"
+  | "assignment_volunteer"
   | "workspace"
   | "conversation"
   | "member"
@@ -1834,6 +1849,117 @@ export class TetherCompanyStore {
     });
     return updated;
   }
+  saveAssignmentPlan(plan: AssignmentPlanRecord): void {
+    this.#put("assignment_plan", plan.id, plan, 1);
+  }
+  assignmentPlan(id: string): AssignmentPlanRecord | undefined {
+    return this.#get("assignment_plan", id);
+  }
+  assignmentBrief(taskId: string): TaskBrief | undefined {
+    return this.#get("assignment_brief", taskId);
+  }
+  assignmentVolunteer(
+    incidentId: string,
+    memberId: string,
+  ): { incidentId: string; memberId: string; expiresAt: string } | undefined {
+    return this.#get("assignment_volunteer", `${incidentId}:${memberId}`);
+  }
+  volunteerForAssignments(incidentId: string, memberId: string) {
+    const incident = this.#get<Incident>("incident", incidentId);
+    if (
+      !incident ||
+      !incident.memberIds.includes(memberId) ||
+      !this.member(memberId)?.active
+    )
+      throw new CompanyError(
+        "forbidden",
+        "Only a current incident member can volunteer",
+        403,
+      );
+    const consent = {
+      incidentId,
+      memberId,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+    this.#transaction(() => {
+      this.#put(
+        "assignment_volunteer",
+        `${incidentId}:${memberId}`,
+        consent,
+        1,
+      );
+      this.#emit(
+        "assignment.volunteered",
+        "incident",
+        incidentId,
+        incident.memberIds,
+      );
+    });
+    return consent;
+  }
+  /** Preflight runs under the same database write lock as every delivery. */
+  applyAssignmentPlan(
+    id: string,
+    preflight: (plan: AssignmentPlanRecord) => void,
+    buildBrief: (task: IncidentTask, index: number) => TaskBrief,
+  ): IncidentTask[] {
+    return this.#transaction(() => {
+      const plan = this.assignmentPlan(id);
+      if (!plan)
+        throw new CompanyError("not_found", "Assignment plan not found", 404);
+      preflight(plan);
+      if (plan.taskIds)
+        return plan.taskIds.map((taskId) =>
+          this.#get<IncidentTask>("task", taskId)!,
+        );
+      // Build and validate the entire batch before creating any record or event.
+      const records = plan.result.tasks.map((item, index) => {
+        const incident = this.#get<Incident>("incident", plan.incidentId);
+        if (
+          !incident?.memberIds.includes(item.ownerId) ||
+          item.nodeIds.some((nodeId) => !incident.nodeIds.includes(nodeId))
+        )
+          throw new CompanyError(
+            "invalid_scope",
+            "Assignment is outside incident scope",
+            409,
+          );
+        const task: IncidentTask = {
+          id: `task-${plan.id}-${index}`,
+          incidentId: plan.incidentId,
+          title: clean(item.title, "title", 300),
+          ownerId: item.ownerId,
+          nodeIds: item.nodeIds,
+          status: "assigned",
+          revision: 1,
+          hasPreparedPrompt: true,
+          assignmentPlanId: plan.id,
+          provenance: item.provenance,
+        };
+        return { task, brief: buildBrief(task, index) };
+      });
+      for (const { task, brief } of records) {
+        this.#put("task", task.id, task, 1);
+        this.#put("assignment_brief", task.id, brief, 1);
+        this.#notification(
+          task.ownerId,
+          task.incidentId,
+          "assignment",
+          "An investigation task was assigned. Open the incident to review your work.",
+        );
+        this.#emit("task.created", "task", task.id, [
+          task.ownerId,
+          plan.actorId,
+        ]);
+      }
+      this.saveAssignmentPlan({
+        ...plan,
+        taskIds: records.map(({ task }) => task.id),
+      });
+      return records.map(({ task }) => task);
+    });
+  }
+
   createTask(
     input: Omit<IncidentTask, "id" | "revision" | "status">,
   ): IncidentTask {

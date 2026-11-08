@@ -24,6 +24,51 @@ export const initials = (v = "?") =>
     .map((x) => x[0])
     .join("")
     .slice(0, 2);
+export function assignmentProvenanceMarkup(provenance = {}) {
+  const live = provenance.mode === "live";
+  const mixed = provenance.mode === "mixed";
+  return `<div class="assignment-provenance"><span class="pill ${live ? "green" : "orange"}">${live ? "Live model" : mixed ? "Live model + some fallback" : "Rule-based fallback"}</span><span>${h([provenance.provider, provenance.model].filter(Boolean).join(" · ") || (live || mixed ? "Model-generated proposal" : "Prepared without live model output"))}</span>${provenance.reason ? `<small>${h(provenance.reason)}</small>` : ""}</div>`;
+}
+export function assignmentPlanMarkup(
+  incidentId,
+  request = {},
+  members = [],
+  nodes = [],
+) {
+  const plan = request.plan;
+  const busy = request.status === "planning" || request.status === "applying";
+  const stages = [
+    "Checking people and hours",
+    "Splitting the work",
+    "Writing individual prompts",
+  ];
+  const stageName = (value) =>
+    value.startsWith("draft:")
+      ? `Writing a prompt for ${members.find((m) => m.id === value.slice(6))?.name || "a responder"}`
+      : {
+          scope: stages[0],
+          planner: stages[1],
+          availability: stages[0],
+          checking_people: stages[0],
+          checking_availability: stages[0],
+          planning: stages[1],
+          allocation: stages[1],
+          prompts: stages[2],
+          writing_prompts: stages[2],
+        }[value] || human(value);
+  return `<section class="assignment-planner card" aria-label="Assignment planning"><div class="tasks-header"><div><span class="eyebrow">Plan together, assign once</span><h2>Prepare each responder’s work</h2><p>Check access and working hours, divide the incident, and prepare a scoped coding prompt for each person.</p></div><button class="primary" data-plan-assignments="${h(incidentId)}" ${busy ? "disabled" : ""}>${request.status === "planning" ? "Preparing proposal…" : plan ? "Plan again" : "Plan assignments"}</button></div>${request.status === "planning" ? `<div class="assignment-working" role="status" aria-live="polite"><span class="running-dot"></span><div><b>Preparing an assignment proposal</b><p>Waiting for the server’s results. No assignments have been sent.</p></div></div><ol class="assignment-stages">${stages.map((stage, index) => `<li><span>${index + 1}</span><b>${stage}</b><small>Awaiting results</small></li>`).join("")}</ol>` : ""}${request.error ? `<p class="assignment-error" role="alert">${h(request.error)}</p>` : ""}${request.status === "applied" ? `<div class="assignment-delivered" role="status"><b>${request.taskIds?.length || 0} ${request.taskIds?.length === 1 ? "assignment" : "assignments"} delivered</b><p>Each responder can open their saved task and prepared prompt below. Coding work has not been executed.</p></div>` : ""}${
+    plan && request.status !== "planning" && request.status !== "applied"
+      ? `<div class="assignment-review"><div class="page-header"><div><span class="eyebrow">Review before sending</span><h3>${plan.tasks.length} proposed ${plan.tasks.length === 1 ? "assignment" : "assignments"}</h3></div>${assignmentProvenanceMarkup(plan)}</div><p class="assignment-summary">${h(plan.summary)}</p><div class="assignment-grid">${plan.tasks
+          .map((task) => {
+            const member = members.find((m) => m.id === task.ownerId);
+            return `<article class="assignment-person"><div class="responder-row"><span class="avatar">${h(initials(member?.name || "Responder"))}</span><div><b>${h(member?.name || "Responder")}</b><small>${h(member?.title || "Incident member")}</small></div></div><h3>${h(task.title)}</h3><p class="assignment-reason">${h(task.reason)}</p><div class="assignment-nodes" aria-label="Assigned systems">${task.nodeIds.map((id) => `<span>${h(nodes.find((n) => n.id === id)?.name || "Scoped system")}</span>`).join("")}</div>${assignmentProvenanceMarkup(task.provenance || { mode: task.promptMode || plan.mode, provider: plan.provider, model: plan.model })}<details class="assignment-prompt"><summary>Review prepared prompt</summary><textarea readonly spellcheck="false" aria-label="Prepared prompt for ${h(member?.name || "responder")}">${h(task.prompt || "No prepared prompt returned.")}</textarea>${task.sourcePaths?.length ? `<p><b>Permitted source paths</b></p><ul>${task.sourcePaths.map((path) => `<li><code>${h(path)}</code></li>`).join("")}</ul>` : ""}</details></article>`;
+          })
+          .join(
+            "",
+          )}</div>${plan.skipped?.length ? `<section class="assignment-skipped"><h3>People not assigned</h3><p>Working hours, consent, access, and existing work determine who can receive a task.</p>${plan.skipped.map((person) => `<div><b>${h(members.find((m) => m.id === person.ownerId)?.name || "Incident member")}</b><span>${h(person.reason)}</span></div>`).join("")}</section>` : ""}${plan.steps?.length ? `<details class="assignment-observed"><summary>How this proposal was prepared</summary><ol>${plan.steps.map((step) => `<li><b>${h(stageName(step.stage))}</b><span>${h(human(step.status))}</span><p>${h(step.detail)}</p></li>`).join("")}</ol></details>` : ""}<div class="assignment-apply"><p>Assigning saves these tasks and prompts in each responder’s account. Review task details here; use Create task for a custom assignment.</p><button class="primary" data-apply-assignments="${h(incidentId)}" ${busy || request.invalid || !plan.tasks.length ? "disabled" : ""}>${request.status === "applying" ? "Saving assignments…" : "Assign all"}</button></div></div>`
+      : ""
+  }</section>`;
+}
 export const field = (label, name, value = "", extra = "") =>
   `<label class="field"><span>${h(label)}</span><input name="${name}" value="${h(value)}" ${extra}></label>`;
 export const textField = (label, name, value = "", extra = "") =>
