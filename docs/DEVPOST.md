@@ -101,8 +101,8 @@ Tether maps systems, people, permissions, and incidents, then uses Nemotron to p
 ## Links and assets
 
 - Public source repository: <https://github.com/Aplled/tether>
-- Devpost thumbnail: `docs/assets/tether-devpost.png`
-- Video thumbnail: `docs/assets/tether-video.png`
+- Devpost thumbnail: `docs/assets/tether-devpost-v2.png`
+- Video thumbnail: `docs/assets/tether-video-v2.png`
 - Animated hero page: <http://127.0.0.1:4173/hero>
 - Local walkthrough: `http://127.0.0.1:4173/`
 - Screenshots: `docs/evidence/deletion/two-presentation-incidents.jpg`, `docs/evidence/deletion/active-incident-highlights.jpg`, `docs/evidence/deletion/engineer-popup.jpg`, and `docs/evidence/deletion/marketing-popup.jpg`
