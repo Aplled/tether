@@ -5,6 +5,8 @@
 **Model requirement:** Every implementation worker uses **GPT-5.6 Sol** (`gpt-5.6-sol`). No silent fallback.\
 **Capacity in this session:** Lead plus at most three concurrent workers.
 
+**Current direction:** The user approved the full [Tether company plan](TETHER-COMPANY-PLAN.md), is building solo, and selected NVIDIA + NMC². Three explicitly GPT-5.6 Sol owners implement the revision: `tether_canvas` owns public UI/canvas modules; `tether_company_backend` owns canonical company data, imports, schedules, handoffs, HTTP and scoped MCP wiring; `tether_auth_security` owns auth, permission templates, exact response authority, the isolated retry fixture, model adapter, and adversarial review. The lead owns the [shared contract](TETHER-BUILD-CONTRACT.md), documentation, integration tests, browser verification, GitHub delivery, and concise user updates. One writer per module; narrow follow-up assignments preserve ownership. Earlier Photon and team work splits below are historical options.
+
 There are two separate systems to plan: the development team building the app, and the incident-response agents operating inside the finished app. Their privileges and responsibilities are different.
 
 ## 1. Development team: lead stays in this chat
@@ -28,6 +30,18 @@ The requested model is a hard assignment constraint, not a preference to reinter
 These are responsibilities across waves, not five workers running simultaneously. The user confirmed both response and mesh are mandatory, so the first three implementation slots are security, domain/response, and communications. Keep the security owner dedicated throughout. Reuse the domain owner's slot for response/MCP once its core stabilizes; use a completed slot for integration verification. Research assignments do not grant broad coding authorization.
 
 ## 3. Dispatch sequence
+
+### Next bounded documentation-derived wave
+
+If implementation resumes, keep single-writer ownership and use explicit `gpt-5.6-sol` for every worker:
+
+| Owner | Bounded assignment | Acceptance evidence |
+| --- | --- | --- |
+| Canvas workflow owner | Infinite canvas with typed nodes, labeled edges, node/edge input, failure-focused view, and contextual owners/tasks/backup plans | Real end-to-end fictional fixture; full graph preserved; no polished-design expansion |
+| Photon/model integration owner | Configurable model adapter plus Photon round trip using extensive API interaction; scoped alert, human question, redacted read-only tool answer, check-in, evidence-linked handoff, and visible delivery state | Captured bidirectional human conversation; local correlation state and idempotent retry; no one-way-alert substitution or approval/execution tool |
+| Security owner | Treat inbound content as untrusted; review allowlisted fictional sender binding, replay/rate bounds, message-to-evidence binding, redaction, scope, and authority separation | Adversarial tests show a phone number or message cannot approve, grant roles, widen scope, or issue execution commands |
+
+The lead owns coordination of canvas/fixture work, sponsor-rule verification, integration review, and truthful submission language; bounded implementation workers own the code so the lead remains responsive. Preserve the frozen contracts until a reviewed change is necessary. A node connection, drag/drop interaction, role label, message, or model response must never create authority; reuse the server policy and exact-action approval flow. Run the Photon spike before UI/model work consumes the day. Timebox its go/no-go to a working round trip within 60 minutes and the first $5-$10 only if spending is separately authorized; otherwise select NMC² + NVIDIA. This documentation assignment does not create accounts, spend money, or claim the spike passed.
 
 ### Wave 0: planning and feasibility
 
@@ -163,7 +177,7 @@ A worker is done when its code integrates with the shared services, behavior is 
 Implementation checkpoints:
 
 1. Preserve the confirmed direction: both response loop and mesh mandatory.
-2. Use the November 7–8 10:00–10:00 Dallas window, completed Flowstate audit, and accepted local-peer proof. Record iOS 27.0.1/no third device and timebox optional native phone setup.
+2. Use the official November 7–8 12:00–12:00 Dallas build window, completed Flowstate audit, and accepted local-peer proof. Keep the earlier 10:00-10:00 estimate only as history. Record iOS 27.0.1/no third device and timebox optional native phone setup.
 3. Use the verified explicit GPT-5.6 Sol override for each implementation worker, without substitution.
 4. Freeze the first contract and fixture scope, then dispatch bounded assignments.
 

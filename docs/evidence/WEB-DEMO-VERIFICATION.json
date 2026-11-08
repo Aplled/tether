@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-08T03:23:00Z",
+  "scope": "local fictional demonstration; no production deployment",
+  "url": "http://127.0.0.1:4173",
+  "checks": {
+    "typecheck": "passed",
+    "webAndModelTests": { "passed": 9, "failed": 0 },
+    "existingBackendTests": { "passed": 60, "failed": 0 },
+    "diffWhitespace": "passed",
+    "browserViewport": "1280x720",
+    "browserConsoleErrorsAtFinalCheck": 0
+  },
+  "browserVerified": [
+    "canvas renders with local Pretext modules and custom SVG icons",
+    "node creation persisted through the local API",
+    "connection creation updated the displayed graph",
+    "handoff message saved and displayed",
+    "scripted planner used six real scoped MCP read/simulation calls",
+    "exact target and digest displayed before confirmation",
+    "actual disposable-process stop independently verified",
+    "canonical fallback artifacts and task evidence verified",
+    "fallback active and repeated approval controls disabled",
+    "reset starts a fresh runnable scenario"
+  ],
+  "provider": {
+    "adapterImplemented": true,
+    "liveNvidiaInferenceVerified": false,
+    "reason": "NVIDIA_API_KEY was unavailable",
+    "fallbackMode": "explicitly labeled scripted planner with real local tools",
+    "jevImplemented": false,
+    "brevInstanceProvisioned": false
+  },
+  "limitations": [
+    "Editable Northstar canvas relationships are presentation context; canonical execution is bound to the fixed pantry demo fixture.",
+    "An unrelated canvas incident cannot produce a scheduler containment proposal.",
+    "Fictional localhost personas do not provide production human authentication or security from another local process.",
+    "Containment stops only the broker-owned disposable scheduler, not a host or network.",
+    "Stores and fictional artifacts are plaintext on one Mac.",
+    "Browser handoff messages are not encrypted mesh transport; the mesh panel references saved three-local-peer proof.",
+    "No physical-device/radio mesh or successful deployed NVIDIA inference is claimed."
+  ],
+  "historicalBackendEvidence": "docs/evidence/VERIFICATION.json",
+  "runbook": "docs/DEMO-RUNBOOK.md"
+}

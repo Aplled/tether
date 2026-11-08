@@ -55,9 +55,28 @@ gpu_memory_mib="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,noun
 [[ "$gpu_memory_mib" =~ ^[0-9]+$ ]] || fail "unable to read GPU memory"
 (( gpu_memory_mib >= 78000 )) || fail "an 80 GB GPU is required for this BF16 setup"
 
-available_kib="$(df -Pk "${HOME}" | awk 'NR==2 {print $4}')"
-[[ "$available_kib" =~ ^[0-9]+$ ]] || fail "unable to read available disk"
-(( available_kib >= 75 * 1024 * 1024 )) || fail "at least 75 GiB free is required before model download"
+workspace_probe="$WORKSPACE_ROOT"
+while [[ ! -e "$workspace_probe" ]]; do
+  parent="$(dirname "$workspace_probe")"
+  [[ "$parent" != "$workspace_probe" ]] || fail "unable to locate the workspace filesystem"
+  workspace_probe="$parent"
+done
+[[ -d "$workspace_probe" ]] || fail "the nearest existing workspace path is not a directory"
+workspace_available_kib="$(df -Pk -- "$workspace_probe" | awk 'NR==2 {print $4}')"
+[[ "$workspace_available_kib" =~ ^[0-9]+$ ]] || fail "unable to read workspace filesystem capacity"
+(( workspace_available_kib >= 75 * 1024 * 1024 )) || fail "the filesystem for ${WORKSPACE_ROOT} needs at least 75 GiB free before model download"
+
+docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)"
+[[ -n "$docker_root" ]] || fail "unable to locate Docker storage"
+docker_probe="$docker_root"
+while [[ ! -e "$docker_probe" ]]; do
+  parent="$(dirname "$docker_probe")"
+  [[ "$parent" != "$docker_probe" ]] || fail "unable to locate the Docker storage filesystem"
+  docker_probe="$parent"
+done
+docker_available_kib="$(df -Pk -- "$docker_probe" | awk 'NR==2 {print $4}')"
+[[ "$docker_available_kib" =~ ^[0-9]+$ ]] || fail "unable to read Docker storage capacity"
+(( docker_available_kib >= 20 * 1024 * 1024 )) || fail "the Docker storage filesystem needs at least 20 GiB free for the vLLM image and layers"
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
   fail "container ${CONTAINER_NAME} already exists; inspect it before replacing anything"

@@ -1,24 +1,42 @@
-# Product Requirements Document — Name TBD
+# Product Requirements Document — Tether
+
+**Approved direction, November 8:** The user reviewed and approved [TETHER-COMPANY-PLAN.md](docs/TETHER-COMPANY-PLAN.md), including company setup, four-account auth, one canonical graph, scoped live collaboration, Graphite canvas reuse, coding-agent task briefs, schedules, and escalation. Implementation is authorized and in progress under [TETHER-BUILD-CONTRACT.md](docs/TETHER-BUILD-CONTRACT.md). Target tracks are **NVIDIA + NMC²**; earlier Photon recommendations below are historical. The source brief and original checkpoint remain below as history and roadmap context, not a claim that every listed feature is complete. Current product instructions are in [TETHER-RUNBOOK.md](docs/TETHER-RUNBOOK.md).
 ## The Local-First, Agentic Cyber-Resilience Platform
 ### Product Requirements Document | HackUTD 2026
 
 **Version:** 3.2 — accepted demo direction\
-**Status:** Backend demo implemented and verified November 7, 2026; UI and production infrastructure remain out of scope\
+**Status:** Backend and interactive local demo verified November 7, 2026. Nemotron adapter implemented with scripted backup; actual provider inference awaits a usable key. Production infrastructure remains out of scope\
 **Potential foundation:** Graphite at `/Users/vyomsingh/Projects/flowstate` audited; standalone incident core with selective helper reuse recommended\
 **Primary audience:** Everyday people, small businesses, nonprofits, and community organizations\
 **Secondary audience:** Small technical teams, local institutions, volunteer response teams, and organizations without dedicated cybersecurity departments\
 **Development strategy:** Standalone application first, Graphite-derived implementation or fork when advantageous\
 **Target:** HackUTD 2026\
-**Product name:** TBD; this is a placeholder, not a chosen brand\
+**Product name:** Tether\
 **Hackathon theme:** Zero Day\
 **Planning date:** November 6, 2026
 
-**User-provided build window:** Saturday November 7, 10:00 → Sunday November 8, 10:00, Dallas time (`America/Chicago`, CST). This is 11:00 → 11:00 in New Jersey (`America/New_York`, EST).\
+**Current official build window:** Saturday November 7, 12:00 → Sunday November 8, 12:00, Dallas time (`America/Chicago`, CST). Devpost registration is Saturday 23:00, final submission is Sunday 12:00, and project expo/judging is 13:00-16:00. The earlier user-provided 10:00-10:00 window is retained only as planning history. This correction does not change the completed 08:00 backend checkpoint.\
 **Available test hardware:** This Mac confirmed; iPhone running iOS 27.0.1 possible; user explicitly confirms no third physical device.
 
 ---
 
 ## Confirmed priorities and accepted demo scope
+
+### Current direction overlay from the full opening deck
+
+**Latest user decision:** Restore the original canvas product, build solo, and target **NVIDIA + NMC²**. Implement the demonstration UI, incident input, and bounded Nemotron tool workflow now, with a clearly labeled scripted backup. This supersedes the Photon recommendation, team ideation pause, four-person split, and older no-UI restrictions below. See [DEMO-UI-SPEC.md](docs/DEMO-UI-SPEC.md).
+
+**Current delivered demo:** An editable browser canvas, incident form, people/authority view, task/handoff surface, actual scoped MCP calls, canonical exact-digest approval, real disposable-process stop, independent observation, verified fallback artifacts, and reset are implemented. Nine web/model tests and all 60 existing backend tests pass. Canvas edits remain presentation context rather than arbitrary executable infrastructure configuration. The optional live NVIDIA provider has not been exercised without a key. See [DEMO-RUNBOOK.md](docs/DEMO-RUNBOOK.md) for the runnable path and limitations; older completion statements below describe the historical backend checkpoint.
+
+The product center remains the shared **infinite operational canvas** described in sections 1.3, 4, 5, 9, and 10. It contains people, teams, services, operations, resources, tasks, backup plans, and incidents joined by meaningful labeled relationships. A failed node traces affected connections, focuses the canvas on relevant work, and surfaces owners, tasks, alternatives, communications, and approvals without deleting the full graph.
+
+Authority is visible on the canvas but is not created by the canvas. Resource ownership, task assignment, action approval, and execution are distinct. Connections, drag-and-drop actions, messages, and model output cannot grant permissions; the server policy remains authoritative. AI reads scoped canvas context through MCP and proposes next steps, while eligible humans approve exact actions.
+
+Keep the implemented core and narrow only the fictional demo scenario to **data-center incident response and evidence-linked handoffs**. The lead's current planning recommendation is **NMC² + Photon** if a bounded spike proves an extensive-API, substantive human conversation round trip and eligibility; otherwise use **NMC² + NVIDIA**. This is not user approval for a full pivot, organizer approval, or an implementation-complete claim. No core product pivot is authorized by this documentation update.
+
+The Photon channel may deliver scoped alerts, answer human questions through read-only incident tools, capture task-owner check-ins, and create evidence-linked handoffs. Neither Photon text nor a model reply can approve containment or grant authority. Final exact-action approval remains in the trusted local flow. Use fictional data only. See [TRACK-STRATEGY.md](docs/TRACK-STRATEGY.md) for page evidence, alternatives, recruiter uncertainty, and official timing.
+
+The current checkpoint implements graph/domain logic, policy/response, MCP, fallback/task state, and the local-peer relay. It does not yet implement the interactive infinite canvas, node/edge editor, deployed AI adapter, or human workflow interfaces.
 
 This document preserves the full supplied product vision, with the name corrected to **TBD**. Zero Day is the hackathon theme. The user confirmed that both the response loop and mesh protocol are mandatory and explicitly accepted the three-local-peer demo on November 7, 2026. The scope below supersedes the original physical three-device demo criterion. The broader feature vision remains roadmap context; detailed implementation choices can be resolved within this accepted scope.
 
@@ -41,6 +59,7 @@ Detailed architecture and implementation records:
 - [Development and product-agent orchestration](docs/AGENT-ORCHESTRATION.md)
 - [Researched security requirements and proof criteria](docs/SECURITY-PLAN.md)
 - [24-hour build and airport preparation plan](docs/BUILD-PLAN.md)
+- [Track and sponsor strategy](docs/TRACK-STRATEGY.md)
 - [Flowstate reuse audit](docs/FLOWSTATE-AUDIT.md)
 - [Device and mesh feasibility](docs/MESH-FEASIBILITY.md)
 

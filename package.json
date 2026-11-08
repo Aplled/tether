@@ -13,9 +13,17 @@
     "agent:demo": "node scripts/agent-run-demo.ts",
     "demo:mesh": "node scripts/mesh-demo.ts",
     "mcp:smoke": "node scripts/mcp-smoke.ts",
-    "mcp:tool": "node scripts/mcp-tool.ts"
+    "mcp:tool": "node scripts/mcp-tool.ts",
+    "demo:web": "node apps/tether/server.ts",
+    "demo:web:legacy": "node apps/demo-web/server.ts",
+    "demo:web:check": "node --test apps/demo-web/agent.test.ts apps/demo-web/smoke.test.ts",
+    "tether:web": "node apps/tether/server.ts",
+    "tether:check": "node --test apps/tether/*.test.ts fixtures/northstar/*.test.ts",
+    "brev:configure": "node scripts/configure-brev.ts",
+    "brev:check": "node --test scripts/configure-brev.test.ts"
   },
   "dependencies": {
+    "@chenglou/pretext": "1.0.0",
     "@modelcontextprotocol/client": "2.4.0",
     "@modelcontextprotocol/server": "2.4.0",
     "libsodium-wrappers": "0.8.4",

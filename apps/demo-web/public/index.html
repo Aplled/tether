@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eaf0f6">
+  <meta name="demo-token" content="">
+  <title>Northstar Compute · Operations canvas</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="rail" aria-label="Primary navigation">
+      <div class="mark" aria-label="Product name TBD"><span>N</span><i></i></div>
+      <nav id="nav"></nav>
+      <button class="rail-button bottom" id="helpButton" title="Keyboard shortcuts"><span>?</span><small>Help</small></button>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation"></button>
+        <div class="workspace-identity">
+          <div class="crumb"><span>Workspace</span><b>/</b><strong id="workspaceName">Northstar Compute</strong></div>
+          <div class="status-line"><span id="sourcePill" class="source-pill offline">Offline preview</span><span id="revisionLabel">revision —</span></div>
+        </div>
+        <div class="top-actions">
+          <button class="button secondary" id="loadIncident">Load incident</button>
+          <button class="button primary" id="runResponse">Run response</button>
+          <button class="icon-button" id="resetDemo" title="Reset demo" aria-label="Reset demo"></button>
+        </div>
+      </header>
+
+      <section id="canvasView" class="view canvas-view active">
+        <div class="canvas-stage" id="canvasStage">
+          <svg id="graph" role="img" aria-label="Interactive operations graph"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#91a1b2"/></marker></defs><g id="world"><g id="edges"></g><g id="nodes"></g></g></svg>
+          <div class="canvas-toolbar" id="canvasToolbar"></div>
+          <div class="focus-bar hidden" id="focusBar"></div>
+          <div class="overview" id="overview"><div class="overview-label">Graph overview</div><svg id="miniMap" viewBox="0 0 200 110"></svg></div>
+          <div class="canvas-hint" id="canvasHint">Drag nodes · drag canvas to pan · scroll to zoom</div>
+        </div>
+        <aside class="inspector" id="inspector"></aside>
+      </section>
+
+      <section id="peopleView" class="view people-view"></section>
+      <section id="activityView" class="view activity-view"></section>
+    </main>
+
+    <aside class="agent-panel" id="agentPanel"></aside>
+  </div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <dialog id="modal"><div id="modalContent"></div></dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

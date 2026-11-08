@@ -4,7 +4,7 @@ This is an optional remote inference path. Nothing in this repository provisions
 
 ## 1. Create and inspect the instance
 
-In Brev, create one instance named `tether-nemotron` with one A100 80 GB. An H100 80 GB is acceptable only if its current price is similar. Use a standard CUDA/PyTorch image, at least 150 GB persistent disk, and a displayed price no higher than $3/hour. Review the price before starting; stop or delete the instance when it is no longer needed.
+In Brev, create one instance named `tether-nemotron` with one A100 80 GB. Prefer a displayed price no higher than $3/hour; a more expensive H100 80 GB requires a shorter running window within the credit budget. Use a standard CUDA/PyTorch VM, at least 150 GB disk, and one instance. The user selected an A100 80 GB Hyperstack listing at $1.62/hour with 850 GB disk included, marked pre-release and no stop/start. That screenshot is a selection checkpoint, not evidence of provisioning or guaranteed availability. A no-stop/start instance must stay running or be terminated, losing its disk. Keep it funded through judging and terminate it afterward.
 
 On the Mac, follow NVIDIA's [Brev CLI installation and authentication instructions](https://docs.nvidia.com/brev/latest/cli/getting-started). The expected flow is:
 
@@ -15,16 +15,16 @@ brev refresh
 brev shell tether-nemotron
 ```
 
-Inside the remote shell, confirm the assigned hardware before downloading anything:
+Inside the remote shell, confirm the assigned hardware and both relevant filesystems before downloading anything. Brev/Hyperstack images commonly use a generic remote account such as `shadeform`; use `$HOME` rather than assuming its absolute home path.
 
 ```bash
 nvidia-smi
 docker version
 docker info
-df -h "$HOME"
+df -h "$HOME" /ephemeral
 ```
 
-The helper requires Linux, Docker, NVIDIA container access, an approximately 80 GB GPU, and at least 75 GiB free. That free-space check is an abort floor for the roughly 60 GB BF16 weights plus the vLLM image and cache metadata, not a sizing recommendation. Provision the requested 150 GB disk so downloads, image layers, logs, and updates have practical headroom. If Brev's image does not already provide the NVIDIA container runtime, use NVIDIA's official installation/configuration steps rather than an unreviewed installer: [NVIDIA Container Toolkit install guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+The helper requires Linux, Docker, NVIDIA container access, and an approximately 80 GB GPU. It checks the filesystem containing the configured model workspace for at least 75 GiB free, then checks Docker's own root filesystem separately for at least 20 GiB free for the vLLM image and layers. It does not assume `$HOME` holds the model cache and does not create or alter mounts. These are abort floors rather than sizing recommendations. If Brev's image does not already provide the NVIDIA container runtime, use NVIDIA's official installation/configuration steps rather than an unreviewed installer: [NVIDIA Container Toolkit install guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 ## 2. Put the repository on the remote host
 
@@ -35,16 +35,16 @@ scp scripts/brev-nemotron-serve.sh tether-nemotron:~/brev-nemotron-serve.sh
 brev shell tether-nemotron
 ```
 
-Do not copy `.env.local`, bootstrap account credentials, Supabase credentials, production keys, or other local runtime state. In the remote shell, inspect the plan first:
+Do not copy `.env.local`, bootstrap account credentials, Supabase credentials, production keys, or other local runtime state. On the selected Hyperstack host, `/ephemeral` is the large attached filesystem. Keep the model cache there by setting the workspace explicitly. In the remote shell, inspect the plan first:
 
 ```bash
-bash ~/brev-nemotron-serve.sh --dry-run
+TETHER_NEMOTRON_ROOT=/ephemeral/tether-nemotron bash ~/brev-nemotron-serve.sh --dry-run
 ```
 
 Then run it only on the verified remote GPU host:
 
 ```bash
-bash ~/brev-nemotron-serve.sh
+TETHER_NEMOTRON_ROOT=/ephemeral/tether-nemotron bash ~/brev-nemotron-serve.sh
 ```
 
 The helper uses:
@@ -55,7 +55,7 @@ The helper uses:
 - the official `qwen3_coder` tool parser and `nano_v3` reasoning parser;
 - a conservative 16,384-token context and two concurrent sequences by default. Set `MAX_NUM_SEQS=3` or `4` only after measuring available memory.
 
-The model cache persists under `~/workspace/tether-nemotron/hf-cache`. The generated API key is stored at `~/workspace/tether-nemotron/private/api-key` with private permissions and is never printed. The helper supplies it through the documented `VLLM_API_KEY` environment variable; it does not place the key in the container command arguments. The container binds port 8000 to remote `127.0.0.1` only. Root-equivalent Docker users can still inspect container environment and process state; treat access to the instance as trusted administrator access.
+With the Hyperstack command above, the model cache persists under `/ephemeral/tether-nemotron/hf-cache`. The generated API key is stored at `/ephemeral/tether-nemotron/private/api-key` with private permissions and is never printed. If another provider exposes a different large persistent filesystem, set `TETHER_NEMOTRON_ROOT` to a directory on that filesystem after inspecting it. The helper supplies it through the documented `VLLM_API_KEY` environment variable; it does not place the key in the container command arguments. The container binds port 8000 to remote `127.0.0.1` only. Root-equivalent Docker users can still inspect container environment and process state; treat access to the instance as trusted administrator access.
 
 The helper will not replace an existing container or occupied port. It verifies the parser checksum, container GPU access, authenticated `/v1/models`, and a forced OpenAI-compatible tool call. A failed check leaves the container available for inspection and does not authorize a live-provider claim.
 
@@ -82,7 +82,7 @@ Leave that process running. In a second Mac terminal at the repository root, cop
 ```bash
 umask 077
 mkdir -p .runtime/tether
-scp tether-nemotron:~/workspace/tether-nemotron/private/api-key .runtime/tether/nemotron-api-key
+scp tether-nemotron:/ephemeral/tether-nemotron/private/api-key .runtime/tether/nemotron-api-key
 chmod 600 .runtime/tether/nemotron-api-key
 curl --fail --silent \
   -H "Authorization: Bearer $(<.runtime/tether/nemotron-api-key)" \
@@ -93,7 +93,13 @@ Do not expose port 8000 on a public interface or add a cloud firewall rule for i
 
 ## 4. Configure Tether locally
 
-Use [.env.brev.example](../.env.brev.example) as a reference. Add or update these entries in the project's ignored `.env.local`, preserving any unrelated settings:
+After copying the key, configure the local backend from the project root without displaying or manually pasting the secret:
+
+```bash
+./scripts/dev.sh run brev:configure
+```
+
+The helper checks the fixed key path and its permissions, then writes `.env.local` privately while preserving unrelated settings. It never prints the key. For reference, [.env.brev.example](../.env.brev.example) lists the resulting settings:
 
 ```dotenv
 NVIDIA_BASE_URL=http://127.0.0.1:8000/v1

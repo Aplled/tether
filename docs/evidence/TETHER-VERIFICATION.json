@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-08T07:35:05.677Z",
+  "product": "Tether",
+  "provenance": "Synthetic Northstar Compute data and isolated local infrastructure",
+  "runtime": {
+    "node": "26.13.0",
+    "globalNodeChanged": false
+  },
+  "checks": [
+    {
+      "command": "./scripts/dev.sh run tether:check",
+      "passed": 40,
+      "failed": 0
+    },
+    {
+      "command": "./scripts/dev.sh run demo:web:check",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "command": "./scripts/dev.sh test",
+      "passed": 60,
+      "failed": 0,
+      "evidence": "VERIFICATION.json",
+      "note": "Preserved original core/mesh checkpoint; unchanged core was not rerun for UI-only fixes."
+    },
+    {
+      "command": "./scripts/dev.sh run brev:check",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "command": "./scripts/dev.sh run typecheck",
+      "status": "passed"
+    },
+    {
+      "command": "./scripts/dev.sh audit --omit=dev --audit-level=high",
+      "knownVulnerabilities": 0
+    }
+  ],
+  "totalPassingTests": 115,
+  "model": {
+    "transport": "Authenticated application HTTP action, browser-triggered; result independently read through a separate authenticated session",
+    "capturedAt": "2026-11-08T07:33:07.553Z",
+    "mode": "live",
+    "provider": "Brev / vLLM",
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+    "protocolVersion": "2026-07-28",
+    "steps": [
+      {
+        "tool": "get_incident",
+        "status": "observed",
+        "detail": "Bounded tool evidence: {\"id\":\"incident-e8d0b8c9-5a11-4329-8025-c503bf7e6d20\",\"title\":\"Cross-tenant retry investigation\",\"observation\":\"A customer retry was accepted for another tenant’s job. Investigate authorization and the training backlog; root cause is unconfirmed.\",\"status\":\"open\",\"regionId\":\"dfw\",\"nodeIds\":[\"retry-queue\",\"retry-route\",\"scheduler\",\"tenant-auth\",\"training-catalog\",\"training-dispatch\"],\"memberIds\":[],\"commanderId\":\"employee-ava\",\"evidenceRevision\":1,\"revision\":1,\"createdAt\":\"2026-11-08T06:36:36.545"
+      },
+      {
+        "tool": "get_dependencies",
+        "status": "observed",
+        "detail": "Bounded tool evidence: {\"nodes\":[{\"id\":\"retry-queue\",\"name\":\"Retry Queue\",\"kind\":\"resource\",\"description\":\"Durable queue for authorized retry requests\",\"regionId\":\"dfw\",\"ownerId\":\"infrastructure-02\",\"criticality\":\"critical\",\"status\":\"healthy\",\"x\":1160,\"y\":100,\"semanticRevision\":1,\"layoutRevision\":1},{\"id\":\"retry-route\",\"name\":\"Job Retry Route\",\"kind\":\"component\",\"description\":\"POST /api/v1/jobs/:jobId/retry\",\"regionId\":\"global\",\"ownerId\":\"employee-noah\",\"criticality\":\"critical\",\"status\":\"healthy\",\"x\":900,\"y\":100,\"sema"
+      },
+      {
+        "tool": "analyze_incident_impact",
+        "status": "observed",
+        "detail": "Bounded tool evidence: {\"organizationId\":\"northstar\",\"algorithmVersion\":\"dependency-v1\",\"graphRevision\":11,\"evaluations\":{\"retry-queue\":{\"nodeId\":\"retry-queue\",\"availability\":\"satisfied\",\"securityTrust\":\"trusted\",\"freshness\":\"fresh\",\"degraded\":false,\"reasons\":[\"edge-retry-route-retry-queue[ALL]: retry-route=satisfied\"],\"paths\":[[\"retry-queue\",\"retry-route\",\"tenant-auth\"]]},\"retry-route\":{\"nodeId\":\"retry-route\",\"availability\":\"satisfied\",\"securityTrust\":\"trusted\",\"freshness\":\"fresh\",\"degraded\":false,\"reasons\":[\"edge-te"
+      }
+    ],
+    "summary": "Model synthesis (untrusted): The incident involves a cross-tenant retry request that was accepted for another tenant's job. Evidence shows the retry path traverses retry-queue → retry-route → tenant-auth, all currently healthy and trusted. However, the root cause of the authorization breach is unconfirmed, and no explicit authorization evidence linking the retry to the original tenant is present.",
+    "recommendation": "Model synthesis (untrusted): Proceed with concrete checks: reproduce the retry under the same tenant and a different tenant, compare the authenticated tenant identity against the job owner, and audit the training backlog for any gaps in authorization training. Do not assume containment is achieved without direct evidence of proper tenant binding.",
+    "timing": "Final browser run duration was not measured. An earlier application run completed four MCP tool calls in 19585ms.",
+    "authority": "Model synthesis is untrusted. No model approval or execution tool exists.",
+    "knownFailureBehavior": [
+      "VPN connection loss caused an honest rule-based fallback.",
+      "A direct answer without tool evidence was rejected; initial evidence acquisition is now required.",
+      "Seeded health is not proof of correct tenant authorization; prompt and regression preserve this distinction."
+    ]
+  },
+  "brev": {
+    "cliVersion": "0.6.337",
+    "instance": "tether-nemotron",
+    "gpu": "NVIDIA A100 80GB PCIe",
+    "memoryMiB": 81920,
+    "driver": "570.195.03",
+    "docker": "29.1.3",
+    "image": "vllm/vllm-openai:v0.12.0",
+    "imageDigest": "sha256:6766ce0c459e24b76f3e9ba14ffc0442131ef4248c904efdcbf0d89e38be01fe",
+    "modelRevision": "bf77c3174f68ad409e1c2aa60daeb46e32d1c606",
+    "contextTokens": 16384,
+    "maxConcurrentSequences": 2,
+    "modelWorkspace": "/ephemeral/tether-nemotron",
+    "remoteBinding": "127.0.0.1:8000",
+    "localBinding": "127.0.0.1:8000",
+    "provisionedBy": "user",
+    "newInstanceCreatedByAgent": false,
+    "trainingPerformed": false,
+    "selectedListing": {
+      "priceUsdPerHour": 1.62,
+      "noStopStart": true,
+      "preRelease": true,
+      "source": "User-provided Brev configuration screenshot; not a current billing or uptime guarantee."
+    }
+  },
+  "browser": {
+    "verified": [
+      "Four independent password logins",
+      "Employee and owned system creation persisted",
+      "Scoped incident workspace and assignments",
+      "Live conversation across responder accounts",
+      "Incoming update preserves another responder draft",
+      "Own-task coding prompt and real approved repository mappings",
+      "Marketing sees minimal notice without private incident",
+      "Focus nodes collapses the incident panel and focus chip can be hidden",
+      "Live Brev synthesis with actual MCP evidence"
+    ],
+    "responseRehearsal": "Passed: stale generation blocked, current exact operation approved, independently observed route disabled/control healthy, tenant-isolating fallback verified, resolution persisted, minimal marketing update delivered.",
+    "screenshots": [
+      "tether/company-canvas.png",
+      "tether/live-nemotron.png",
+      "tether/marketing-portrait.png",
+      "tether/verified-response.png"
+    ]
+  },
+  "authorityAndPersistence": {
+    "coverageInspection": "Current incident assignment authority required",
+    "analysisProjection": "Current actor/policy/scope cache keyed by incident; no cross-incident UI reuse",
+    "proposalProjection": "Latest per incident; stale target/context cannot be approved",
+    "response": "Fixed retry route operation, exact digest and current commander grant, durable pre-dispatch reservation, independent service observations",
+    "recovery": "Core process-stop and encrypted relay SIGKILL proof retained in VERIFICATION.json and MESH-PROOF.json",
+    "responseEvidence": "tether/company-response.json"
+  },
+  "limitations": [
+    "Plaintext local SQLite and synthetic records; no deployed Supabase integration, SSO or production hosting.",
+    "Company containment disables only the primary retry route in one disposable process. The process and prebuilt safe fallback remain running.",
+    "Coverage is a manual point-in-time eligibility calculation. No durable pager, acknowledgment timer or outbound email/SMS/push engine exists.",
+    "Imports are bounded snapshots, not maintained HR or repository connectors.",
+    "Three logical peer processes share one Mac; no physical radio mesh proof.",
+    "Model answers can be wrong. Provider, SSH tunnel and internet availability are not guaranteed.",
+    "Analysis, brief and import preview caches are memory-only; canonical company/auth/authority records persist.",
+    "Normal product chat uses authenticated local event streams, separate from the encrypted peer protocol."
+  ],
+  "sourceFileSha256": {
+    "apps/demo-web/agent.test.ts": "4051971dc7a72866002d48d2c0635abe831463606a41ce689c9370d85d3312be",
+    "apps/demo-web/agent.ts": "6a20cbf0a8df4671ac2b1e3f2bcdc9a947382bfb64eadda1e5278d95a7d1cac0",
+    "apps/demo-web/public/app.js": "a7b7bdf5319d63ad7a34db57a24a6beb97b4ee3f24599071a378bd588558dab6",
+    "apps/demo-web/public/icons.js": "9a0177bacacde15a044d2ba879215365e98f1c3de00d4c94fd549c5fab875e7e",
+    "apps/demo-web/public/index.html": "7f14538fd364e610cd628342ce2d6a3fd3c1b1a6f04eb913a768bd448dc8ae29",
+    "apps/demo-web/public/styles.css": "ada95e93b31d592a2fbe3fab4907b17ab3d7dd5df6fe5b655b0ff1a232f9701b",
+    "apps/demo-web/public/vendor/pretext/LICENSE": "b0bc6870efb4e667f911d5f6b52fc9b321d634a0469a17464e35da244c28f128",
+    "apps/demo-web/public/vendor/pretext/analysis.js": "3687d34b1e91007c183fd81fe21db20b080b8a0041261c986115a3574ae2b0d3",
+    "apps/demo-web/public/vendor/pretext/gecko-line-breaks.js": "1f0bb06b0d5e5e2d70e0ca92b581253420ed0201711bc5a0b21329a3742c3d48",
+    "apps/demo-web/public/vendor/pretext/generated/engine-break-data.js": "9309fb6f223a7f0d1b7d613cada043257b6908348939a15a96fa036e0b660dd3",
+    "apps/demo-web/public/vendor/pretext/generated/webkit-generic-families.js": "c9326b27ec845345c8cd729cdf1d435bd398a9303ec3a4ac43ba086ef40ac5ce",
+    "apps/demo-web/public/vendor/pretext/graphemes.js": "4b1eb620fe4f6cb7bd408bc3086fc188ff6674bec9fa0604e3646e78e8aa531c",
+    "apps/demo-web/public/vendor/pretext/han-kerning.js": "06a1fc1b22d80fad0bfebb8c11c61c111edc0088bc24af7435a0570c1288ea8a",
+    "apps/demo-web/public/vendor/pretext/layout.js": "007caad23be96aa07b8710fb210798896b709bf16e141a0e5f8c90da2483f866",
+    "apps/demo-web/public/vendor/pretext/line-break.js": "b8d5791cfccc573191befb6bd3969f0b5df8d3f432817f8c03c22824afec265b",
+    "apps/demo-web/public/vendor/pretext/line-breaks.js": "d3dbc44c317536b65c058a16e012d5140271bc57f9d67db284262a0143613abb",
+    "apps/demo-web/public/vendor/pretext/line-text.js": "c3201d5caf7349a1b50bb65c165da019155d0a8e560f85f44adf1f4b21ef299e",
+    "apps/demo-web/public/vendor/pretext/measurement.js": "70886b6d1233260ae1f5ab7af04475697f2d9550f65e700a24e68978220e31b7",
+    "apps/demo-web/public/vendor/pretext/prepare.js": "8aff2c659b0d62e14a97eaab197faba2f86741203cf5b115c731b35e8e3cebf0",
+    "apps/demo-web/public/vendor/pretext/rich-inline.js": "2516c53420e95480aabbdb402f1111cc52f5dcd6c554833c4e1e952c35721dc6",
+    "apps/demo-web/server.ts": "702fd24d092ee932484d320f4276f433524a6e1fb24a3e399e24f4b7fa590a74",
+    "apps/demo-web/session.ts": "c77211e879560e9e9bbb89e9c0e0e590a260da061113b45cb9b406836bf7d1e6",
+    "apps/demo-web/smoke.test.ts": "bf4e9ebc441f57591e66ca4de72c64ac4d7195c5186d4fe06bf1074603f9be78",
+    "apps/demo-web/types.ts": "4f729cd28f59fc3462f590c2b6f089533dd2939529f32378b10a4b0dcf141d09",
+    "apps/tether/auth.test.ts": "a06d1acf2bebd26a56c3fa1fd14a9ae9ab5e1f9aaab78ca4fc6e1f480fc5a50e",
+    "apps/tether/auth.ts": "6ae3f1e713e6e720df34229e632b443c49076a19d84f88afa8dc5d737e96436e",
+    "apps/tether/company.test.ts": "0b5c30002572737b5a9f38079108744b4572b18b41497e72432a2580ec117d60",
+    "apps/tether/company.ts": "eb81f021eb698a24549ec6f2309ee741fbc68f315789b13d109c7d735f66911f",
+    "apps/tether/handoffs.test.ts": "ba0418f16fe9207ffa9cd5ba0ed35b4dda427ac414166b6242707c35bf258042",
+    "apps/tether/handoffs.ts": "b4ddba2ed067b33229ea1370d58f0f1a1e77432f5d7e065a53dec6f2e87f4b51",
+    "apps/tether/imports.test.ts": "323219d64ea01d5af78df54594ac75e373f68724655bbf0e07e1c3db5921c8a2",
+    "apps/tether/imports.ts": "ebec6f8e092781e601a6c806d18f0bcb5f3451e50545670dafc1f00f0b066476",
+    "apps/tether/integration.test.ts": "9c54bd3745ae94bddaea8a30cc1ceda1751e03ea162463af873f18f0af0f3198",
+    "apps/tether/mcp.test.ts": "3b28e5c146b3dbfa61fec2fe6ac874fd5af13a92e16ccaeebb77b760f51a7447",
+    "apps/tether/mcp.ts": "48b7cc2e733efd8b984eace93e3b0d355f02198b6fb1196ccca2e57bb6f4a481",
+    "apps/tether/permissions.test.ts": "46ca7a8ecfebe9280ba4b938155e9fdf064eb46bf28cbc5117b41b63731414b3",
+    "apps/tether/permissions.ts": "e4478fca16c5a247b7e9ba1a7e0d9c70c0648c0d4b4965f22088309b77126136",
+    "apps/tether/projection.test.ts": "d163235614a45eedd35065c2d967de2024b90087af6bde35fa855d8331eb352e",
+    "apps/tether/public/api.js": "2095fd5965e11d01d8c05f9f8df6ce36658203528cbb8c143c55af7c223633ca",
+    "apps/tether/public/app.js": "ba0cc23817e49c7a6507cb947f8cbe2b6829c7b2fbef035be2a8617f1e3f6823",
+    "apps/tether/public/canvas.js": "98a5c0dddd84d19cb945974609eecaacf1203195c298f916bb66e5d50530f7df",
+    "apps/tether/public/favicon.svg": "8338bf0f45316917fe846572e60ab0846662cde5987fab9aa1af80e490553041",
+    "apps/tether/public/icons.js": "c83cb4363ecb303631a9a12193397097cc6bac958fa1d1aca7de1fdaba0ee022",
+    "apps/tether/public/index.html": "7ddea2e97660594d22b1c3b1e56b4bb9a30e6e94121535782f9f1201fbcce9da",
+    "apps/tether/public/panels.js": "f27149af956a5aca36b4d391fd5447fda0a3cb05d9c7afe810718124428c1ae3",
+    "apps/tether/public/pretext/LICENSE": "075e0f9b8c43119ba5cfdb11abb1c812e007c100d9a259af7e09b3fab007486b",
+    "apps/tether/public/pretext/analysis.d.ts": "f5188bf5ed3efb8f828a18d1c652b860bc93735c6fc643c36c6d136f9a3fd4f8",
+    "apps/tether/public/pretext/analysis.d.ts.map": "4fb8d2500f21f8808079032a899cddcc1f20ca9520f97d1856a36e8c074e4211",
+    "apps/tether/public/pretext/analysis.js": "3687d34b1e91007c183fd81fe21db20b080b8a0041261c986115a3574ae2b0d3",
+    "apps/tether/public/pretext/gecko-line-breaks.d.ts": "d9fd91370a82dd9ccdbb0ac312aaf502d18a97d36b2db706c56e0a7425a9c000",
+    "apps/tether/public/pretext/gecko-line-breaks.d.ts.map": "2c912b66bd674be4b9970e2532c961a8b03ec11171f02720bf968aaa449084d9",
+    "apps/tether/public/pretext/gecko-line-breaks.js": "1f0bb06b0d5e5e2d70e0ca92b581253420ed0201711bc5a0b21329a3742c3d48",
+    "apps/tether/public/pretext/generated/engine-break-data.d.ts": "b320d38789c6d710e577cf3addd1fb1698d871f208859d150cb0d6ea1881fff8",
+    "apps/tether/public/pretext/generated/engine-break-data.d.ts.map": "0341749a07a713a7ca7553eb6c45223ced573abfa728ea2a0193098d5c6830cf",
+    "apps/tether/public/pretext/generated/engine-break-data.js": "9309fb6f223a7f0d1b7d613cada043257b6908348939a15a96fa036e0b660dd3",
+    "apps/tether/public/pretext/generated/webkit-generic-families.d.ts": "7ac3efea372133fa7fc035f8e6526c5dabbfb770bc38d59b26f7ea2b125b86e6",
+    "apps/tether/public/pretext/generated/webkit-generic-families.d.ts.map": "669739c0fc7bc3c0011609694940f274d9dc14daf67f95de91aacd05e4d1fd90",
+    "apps/tether/public/pretext/generated/webkit-generic-families.js": "c9326b27ec845345c8cd729cdf1d435bd398a9303ec3a4ac43ba086ef40ac5ce",
+    "apps/tether/public/pretext/graphemes.d.ts": "383858b06d2d1eefbc794f856e3845ea2659def96a22f51095829e59953c6227",
+    "apps/tether/public/pretext/graphemes.d.ts.map": "005a4faa549f8fe5e2e2412021ea3653456bd73d496206b54bf1182ff48ca5df",
+    "apps/tether/public/pretext/graphemes.js": "4b1eb620fe4f6cb7bd408bc3086fc188ff6674bec9fa0604e3646e78e8aa531c",
+    "apps/tether/public/pretext/han-kerning.d.ts": "0cc2f2426da0efa4fe13b1bef961497bdec954f132e7479106e3d9ef61a3d9b4",
+    "apps/tether/public/pretext/han-kerning.d.ts.map": "27571e021643ca2c742fcaafaa248061f40155ea98ec29ccb8e934b9175caea1",
+    "apps/tether/public/pretext/han-kerning.js": "06a1fc1b22d80fad0bfebb8c11c61c111edc0088bc24af7435a0570c1288ea8a",
+    "apps/tether/public/pretext/layout.d.ts": "f58a8ee52e418572e514555316c081ecfb83b929668d234a0879e594dbd5d332",
+    "apps/tether/public/pretext/layout.d.ts.map": "85f7cf004567e73594e1a1ab848143bea59abdf7354521d0f839aa2aa2234f3f",
+    "apps/tether/public/pretext/layout.js": "007caad23be96aa07b8710fb210798896b709bf16e141a0e5f8c90da2483f866",
+    "apps/tether/public/pretext/line-break.d.ts": "5a03d58502fc4164010da677f7b3423cb1042fe566b63aae1f7ee52c7154010c",
+    "apps/tether/public/pretext/line-break.d.ts.map": "d99e7397736f415adcd4e69a9cf81d156ede92cc20444b7171bb53dfec4a1de0",
+    "apps/tether/public/pretext/line-break.js": "b8d5791cfccc573191befb6bd3969f0b5df8d3f432817f8c03c22824afec265b",
+    "apps/tether/public/pretext/line-breaks.d.ts": "e1200d50b630cac910544581f9c9907b1cdc9253ad8cf0d8c759eecc51175427",
+    "apps/tether/public/pretext/line-breaks.d.ts.map": "a8723ca6cfa30ac4a05d94b500273555af4d879cbe4407d3a1d4949c361f3edb",
+    "apps/tether/public/pretext/line-breaks.js": "d3dbc44c317536b65c058a16e012d5140271bc57f9d67db284262a0143613abb",
+    "apps/tether/public/pretext/line-text.d.ts": "92a16af06cb97b2f68dd56c6a5cc481a77478de8542d090fdf09194119799f17",
+    "apps/tether/public/pretext/line-text.d.ts.map": "a3c8edb6afaef940fe3c6032f1bfbff32c5cb95ec30a790c1c5416c97d4aecaa",
+    "apps/tether/public/pretext/line-text.js": "c3201d5caf7349a1b50bb65c165da019155d0a8e560f85f44adf1f4b21ef299e",
+    "apps/tether/public/pretext/measurement.d.ts": "22e50552de2dced77f8471f938f6967659ecfe2f515eebc15035deb8ece8dfa3",
+    "apps/tether/public/pretext/measurement.d.ts.map": "fc2fb6045723682a440e63daf64752d454a55ed838a7f44beac70d0df23a4d3c",
+    "apps/tether/public/pretext/measurement.js": "70886b6d1233260ae1f5ab7af04475697f2d9550f65e700a24e68978220e31b7",
+    "apps/tether/public/pretext/prepare.d.ts": "a999c15a87b4f4ba35a2ade16e02b8d93e139c2cbfe6868be08285fa4608ce41",
+    "apps/tether/public/pretext/prepare.d.ts.map": "2cc70be9331e6fbcdad6f1a9ecd3d1f989562c109aa337f7a5c6869c3995b173",
+    "apps/tether/public/pretext/prepare.js": "8aff2c659b0d62e14a97eaab197faba2f86741203cf5b115c731b35e8e3cebf0",
+    "apps/tether/public/pretext/rich-inline.d.ts": "b8bf7b372b0cc1f11bba4891ef588ed3458c6ffc8aa933fb36b4a3047e215b80",
+    "apps/tether/public/pretext/rich-inline.d.ts.map": "c8fd4c4a57f56e13dbd748d3cf19a440a8a462ea38b85459be22251c12bcd87f",
+    "apps/tether/public/pretext/rich-inline.js": "2516c53420e95480aabbdb402f1111cc52f5dcd6c554833c4e1e952c35721dc6",
+    "apps/tether/public/styles.css": "37f3b1f2ebc55494c01250e4b12e4879ab07f6248cd9041638d349fcc103dc13",
+    "apps/tether/response.test.ts": "e4aafcf8c02c837da15ca14988310d17e96e121fa4d18785ab505f1dfca5af49",
+    "apps/tether/response.ts": "ef8fd2c8e4a95f4f81934c5e9f11d0f7d5c2f2e52080a79ca6534ba01335e971",
+    "apps/tether/scheduling.test.ts": "f0ce2826049b1788a3b8ef416353d1d13140f45021f53349a0410d1d3576099a",
+    "apps/tether/scheduling.ts": "7c5940447835308538dbb9a9ca5ccfbe7c947032779640d04169d75e874bc235",
+    "apps/tether/seed.ts": "a51ec626344d61342e8cba604ef262198d701f437ed7ad202b697ac65c63c97a",
+    "apps/tether/server.ts": "7bb2cbddb8ed62f3e4aeb38d4c5985d60da124a463baf2e73d997ff828c04277",
+    "apps/tether/types.ts": "2e90c096f07d66d10fba8f7912890602cd129137c678bba90d2ad243fd2cd52a",
+    "fixtures/northstar/retry-service.test.ts": "b9c48b0dcbda01ec9fd1da689edf73b844196e723617e0c7c196e2954372d939",
+    "fixtures/northstar/retry-service.ts": "6375a0588a86e8f66f459c8bb85d527ce5cf090f8d9faf64f83c62fbb905429c",
+    "package-lock.json": "adccb64bd8eda97c19656cd03dfd0fb9fbca8c2ecdf71c21b109d86d85d3408c",
+    "package.json": "1e80a6457a3b90c99d16e686f908d733756755dae28bbfdc6adc47e187658d3d",
+    "scripts/brev-nemotron-serve.sh": "8c60240b38c4bec6b2c71448b8ceece58ab1b2ccc3125341a3b9ecd0d9ea21a6",
+    "scripts/configure-brev.test.ts": "e651e237fa872ac334644be490bfc8268ab08fad87820dba24cb5e8c1680c8f3",
+    "scripts/configure-brev.ts": "f88d3d01288dea758e46585fbde6261131631b7ff18b7010a390a484d7cbf003"
+  },
+  "secretReview": {
+    "stagedFiles": 122,
+    "actualLocalCredentialsFound": 0,
+    "credentialPatternsFound": 0,
+    "privateRuntimeAndEnvironmentFilesIgnored": true
+  }
+}
