@@ -66,6 +66,10 @@ try {
 const staticFiles = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
+  ["/hero", "hero.html"],
+  ["/hero.html", "hero.html"],
+  ["/hero.css", "hero.css"],
+  ["/hero.js", "hero.js"],
   ["/app.js", "app.js"],
   ["/api.js", "api.js"],
   ["/canvas.js", "canvas.js"],

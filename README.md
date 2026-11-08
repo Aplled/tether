@@ -29,6 +29,8 @@ The Nemotron adapter is connected to the user's Brev A100 through an authenticat
 
 Open **http://127.0.0.1:4173**. Sign in using the locally generated credentials in `.runtime/tether/bootstrap-accounts.json`. This file is private and ignored by Git; never paste it into chat or commit it. Open separate tabs for Ava, Noah, Priya, and Elena. There is no persona picker. See the [Tether walkthrough](docs/TETHER-RUNBOOK.md), [security boundary](docs/TETHER-SECURITY.md), and [Brev setup](docs/BREV-SETUP.md).
 
+The animated introduction is at **http://127.0.0.1:4173/hero**. Its visual map is decorative; **Open Tether** leads to the working app.
+
 Run `./scripts/dev.sh run tether:check` for company, authentication, permissions, assignment, fixture, and HTTP checks, and `./scripts/dev.sh run demo:web:check` for the model adapter and older web regressions. The current app passes **94 company checks and typecheck**. The previous 13 web/model checks, 2 Brev setup checks, and historical 60-test core checkpoint remain separately recorded. Fresh reviewers also walk the actual browser flows without source access; those findings drive fixes. Test totals alone do not establish UI readiness. See [the rebuild contract](docs/TETHER-REBUILD-CONTRACT.md). The old web server remains available through `demo:web:legacy` for regression work.
 
 Presentation material: [click-by-click script](docs/PRESENTATION.md), [Devpost copy](docs/DEVPOST.md), and [cleanup/notification evidence](docs/evidence/CLEANUP-VERIFICATION.json). The presentation starts with three ordinary workspaces and two incidents; all 43 user-positioned nodes were preserved exactly.
