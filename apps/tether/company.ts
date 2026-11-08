@@ -1,3 +1,4 @@
+import { memberFieldErrors } from "./imports.ts";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -695,6 +696,28 @@ export class TetherCompanyStore {
     };
   }
 
+  #validateMember(member: Omit<Member, "revision">): void {
+    const errors = memberFieldErrors(
+      member,
+      departments.map(([id]) => id),
+    );
+    if (
+      this.#list<Member>("member").some(
+        (existing) =>
+          existing.id !== member.id &&
+          existing.email.toLowerCase() === member.email?.toLowerCase(),
+      )
+    )
+      errors.push("email already belongs to another employee");
+    if (
+      member.managerId &&
+      (member.managerId === member.id || !this.member(member.managerId)?.active)
+    )
+      errors.push("managerId must reference another active employee");
+    if (errors.length)
+      throw new CompanyError("invalid_input", errors.join("; "));
+  }
+
   addMember(input: Omit<Member, "revision">): Member {
     if (this.#get("member", input.id))
       throw new CompanyError("duplicate", "member already exists", 409);
@@ -706,6 +729,7 @@ export class TetherCompanyStore {
         "timezone must be an IANA timezone",
       );
     }
+    this.#validateMember(input);
     const member = {
       ...input,
       id: clean(input.id, "id", 100),
@@ -857,6 +881,7 @@ export class TetherCompanyStore {
         "invalid_preferences",
         "notification preferences are invalid",
       );
+    this.#validateMember({ ...current, ...patch });
     const updated = {
       ...current,
       ...patch,

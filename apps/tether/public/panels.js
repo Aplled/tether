@@ -157,6 +157,58 @@ export function settingsForm(m = {}) {
     },
   );
 }
+export function validImportPreview(preview) {
+  return Boolean(
+    preview &&
+    typeof preview.previewId === "string" &&
+    preview.previewId &&
+    Array.isArray(preview.errors) &&
+    preview.errors.length === 0 &&
+    !(Number(preview.summary?.invalid) > 0) &&
+    Array.isArray(preview.rows) &&
+    preview.rows.length > 0,
+  );
+}
+export function importPreviewMarkup(
+  preview,
+  departments = [],
+  existingRecords = [],
+) {
+  const rows = preview.rows || [],
+    errors = preview.errors || [],
+    warnings = preview.warnings || [];
+  const people = preview.format === "employees_csv";
+  const valid = validImportPreview(preview);
+  const existingIds = new Set(existingRecords.map((record) => record.id));
+  const updates = rows.filter((row) => existingIds.has(row.id)).length;
+  const additions = rows.length - updates;
+  const noun = (count) =>
+    people
+      ? count === 1
+        ? "profile"
+        : "profiles"
+      : count === 1
+        ? "system"
+        : "systems";
+  const operationSummary = `${additions} new ${noun(additions)} will be added · ${updates} existing ${noun(updates)} will be updated.`;
+  const message = (entry) =>
+    typeof entry === "string"
+      ? entry
+      : entry.message || entry.reason || "Review this record";
+  return `<article class="card import-review"><h3>${valid ? "Ready to import" : "Fix these records before importing"}</h3><p>${rows.length} ${rows.length === 1 ? "record" : "records"} · ${errors.length} ${errors.length === 1 ? "error" : "errors"} · ${warnings.length} ${warnings.length === 1 ? "warning" : "warnings"}</p>${valid ? `<p><strong>${h(operationSummary)}</strong></p>` : ""}${errors.length ? `<ul class="import-errors">${errors.map((error) => `<li>${h(message(error))}</li>`).join("")}</ul>` : ""}${warnings.length ? `<details><summary>Warnings to review</summary><ul>${warnings.map((warning) => `<li>${h(message(warning))}</li>`).join("")}</ul></details>` : ""}${
+    rows.length
+      ? `<div class="import-records">${rows
+          .slice(0, 5)
+          .map(
+            (row, index) =>
+              `<div><span>${index + 1}</span><p><b>${h(row.name || "Unnamed record")}</b>${valid ? `<small>${existingIds.has(row.id) ? "Update existing" : "Add new"} ${people ? "profile" : "system"}</small>` : ""}<small>${h(people ? [row.title, departments.find((d) => d.id === row.departmentId)?.name || human(row.departmentId), row.email].filter(Boolean).join(" · ") : [human(row.kind || "service"), row.description].filter(Boolean).join(" · "))}</small></p></div>`,
+          )
+          .join(
+            "",
+          )}</div>${rows.length > 5 ? `<small>Showing the first 5 of ${rows.length} records.</small>` : ""}`
+      : ""
+  }${valid ? "<p>Confirm to add new records and apply changes to existing records.</p>" : "<p>Correct the file, then choose it again. Nothing has been imported.</p>"}<button type="button" data-reset-import-preview>Preview again</button></article>`;
+}
 export function importSheet(kind) {
   const csv =
     "id,name,email,departmentId,title,team,timezone\nemployee-alex,Alex Morgan,alex@example.com,engineering,Software Engineer,Platform,America/Chicago";
@@ -181,7 +233,7 @@ export function importSheet(kind) {
   );
   return sheet(
     kind === "people" ? "Import employee CSV" : "Import catalog JSON",
-    `<p>Upload 1–150 records, review validation, then confirm.</p><details open><summary>Example format</summary><pre>${h(kind === "people" ? csv : catalog)}</pre><button type="button" data-download-example="${kind}">Download example</button></details><label class="field"><span>Choose ${kind === "people" ? "CSV" : "JSON"} file</span><input type="file" name="file" accept="${kind === "people" ? ".csv" : ".json"}" required></label><div id="import-preview"></div>`,
+    `<p>Upload up to 250 records in a file of 128 KiB or less, review validation, then confirm.</p><details open><summary>Example format</summary><pre>${h(kind === "people" ? csv : catalog)}</pre><button type="button" data-download-example="${kind}">Download example</button></details><label class="field"><span>Choose ${kind === "people" ? "CSV" : "JSON"} file</span><input type="file" name="file" accept="${kind === "people" ? ".csv" : ".json"}" required></label><div id="import-preview"></div>`,
     { id: "import-form", subtitle: "Company setup", submit: "Preview import" },
   );
 }

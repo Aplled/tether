@@ -23,6 +23,8 @@ import {
   workspaceForm,
   settingsForm,
   importSheet,
+  validImportPreview,
+  importPreviewMarkup,
   nodeInspector,
   peopleView,
   setupView,
@@ -50,6 +52,7 @@ const state = {
   replay: null,
 };
 let canvas, disconnect, canvasTabId, replayTimer;
+const importPreviews = new WeakMap();
 let liveRefreshTimer,
   liveRefreshPending = false,
   pointerActive = false;
@@ -1222,6 +1225,7 @@ function bindForms(root) {
     f.onsubmit = async (e) => {
       e.preventDefault();
       const button = f.querySelector("[type=submit]");
+      if (f.getAttribute("id") === "import-form" && button.disabled) return;
       button.disabled = true;
       f.querySelector(".form-error")?.replaceChildren();
       try {
@@ -1231,7 +1235,8 @@ function bindForms(root) {
         if (error) error.textContent = explainError(e);
         else toast(explainError(e), true);
       } finally {
-        button.disabled = false;
+        const preview = importPreviews.get(f)?.preview;
+        button.disabled = Boolean(preview && !validImportPreview(preview));
       }
     };
   });
@@ -1249,10 +1254,17 @@ function bindForms(root) {
     .querySelector("#import-form input[type=file]")
     ?.addEventListener("change", () => {
       const f = root.querySelector("#import-form");
-      delete f.dataset.previewId;
-      f.querySelector("[type=submit]").textContent = "Preview import";
-      f.querySelector("#import-preview").innerHTML = "";
+      resetImportPreview(f);
     });
+}
+function resetImportPreview(form) {
+  importPreviews.delete(form);
+  delete form.dataset.previewId;
+  const button = form.querySelector("[type=submit]");
+  button.textContent = "Preview import";
+  button.disabled = false;
+  form.querySelector("#import-preview").innerHTML = "";
+  form.querySelector(".form-error")?.replaceChildren();
 }
 function filterPeople() {
   const q = document.querySelector("#people-search")?.value.toLowerCase() || "",
@@ -1613,31 +1625,50 @@ async function submitForm(f) {
   } else if (f.getAttribute("id") === "import-form") {
     const file = f.elements.file.files[0];
     if (!file) throw Error("Choose a file.");
-    if (file.size > 196000) throw Error("Choose a file smaller than 196 KB.");
-    if (!f.dataset.previewId) {
+    if (file.size > 128 * 1024)
+      throw Error("Choose a file of 128 KiB or less.");
+    const review = importPreviews.get(f);
+    if (!review) {
+      const semanticRevision = state.data.organization.semanticRevision;
       const r = await action("import.preview", {
         format:
           state.importKind === "people" ? "employees_csv" : "catalog_json",
         content: await file.text(),
       });
-      const p = r.result;
-      f.dataset.previewId = p.previewId;
-      f.querySelector("#import-preview").innerHTML =
-        `<article class="card"><h3>${h(typeof p.summary === "string" ? p.summary : "Preview ready")}</h3><p>${p.rows?.length || p.rowCount || ""} records · ${p.errors?.length || 0} errors · ${p.warnings?.length || 0} warnings</p>${[...(p.errors || []), ...(p.warnings || [])].map((e) => `<p>${h(typeof e === "string" ? e : e.message || e.reason || "Review this record")}</p>`).join("")}</article>`;
+      if (!f.isConnected || f.elements.file.files[0] !== file) return;
+      const preview = r.result;
+      importPreviews.set(f, { preview, file, semanticRevision });
+      f.dataset.previewId = preview.previewId || "";
+      f.querySelector("#import-preview").innerHTML = importPreviewMarkup(
+        preview,
+        items("departments"),
+        items(preview.format === "employees_csv" ? "members" : "nodes"),
+      );
       f.querySelector("[type=submit]").textContent = "Confirm import";
-      if (p.errors?.length) {
-        delete f.dataset.previewId;
+      f.querySelector("[data-reset-import-preview]").onclick = () =>
+        resetImportPreview(f);
+      if (!validImportPreview(preview))
         throw Error("Fix the listed errors and choose the corrected file.");
-      }
     } else {
+      // A disabled button is not the validation boundary: refuse an invalid or
+      // replaced preview even if submission is triggered directly.
+      if (review.file !== file)
+        throw Error(
+          "The selected file changed. Preview it again before confirming.",
+        );
+      if (!validImportPreview(review.preview))
+        throw Error(
+          "This preview has errors. Correct the file and preview it again.",
+        );
       await mutate(
         "import.commit",
         {
-          previewId: f.dataset.previewId,
-          semanticRevision: state.data.organization.semanticRevision,
+          previewId: review.preview.previewId,
+          semanticRevision: review.semanticRevision,
         },
         { render: false },
       );
+      importPreviews.delete(f);
       closeOverlay();
       render();
       toast("Import saved");

@@ -3273,3 +3273,43 @@ dd {
   color: #485b71;
   font-size: 13px;
 }
+
+.import-errors {
+  color: #9b3b32;
+  padding-left: 20px;
+}
+.import-errors li {
+  margin: 7px 0;
+}
+.import-records {
+  margin: 14px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.import-records > div {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.import-records > div:last-child {
+  border-bottom: 0;
+}
+.import-records > div > span {
+  color: var(--muted);
+  min-width: 14px;
+}
+.import-records p {
+  margin: 0;
+  min-width: 0;
+}
+.import-records b,
+.import-records small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.import-records small {
+  margin-top: 3px;
+  color: var(--muted);
+}

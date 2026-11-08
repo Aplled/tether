@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-11-08T10:26:31.366Z",
+  "recordedAt": "2026-11-08T10:55:49.105Z",
   "product": "Tether",
   "baseCommit": "de8dbe59bb3fe7e9d3ca63ab622d3cc48730547e",
   "provenance": "Synthetic company records, loopback local services, and actual CUA browser interactions. No production infrastructure.",
@@ -14,9 +14,9 @@
   "checks": [
     {
       "command": "./scripts/dev.sh run tether:check",
-      "passed": 58,
+      "passed": 62,
       "failed": 0,
-      "note": "Includes actual six-connection saturation, queued request recovery, reconnect, cancellation, and revoked-stream regression."
+      "note": "Includes actual six-connection saturation, queued request recovery, reconnect, cancellation, and revoked-stream regression. Includes import reference validation, immutable previews and preflight rejection before covered batch validation failures can write rows."
     },
     {
       "command": "./scripts/dev.sh run demo:web:check",
@@ -48,7 +48,7 @@
     "note": "Original response and encrypted three-local-peer modules remain unchanged; not presented as new browser evidence."
   },
   "browser": {
-    "method": "Four fresh-context GPT-6 Astra reviewers received the URL, privately read local bootstrap credentials, and used browser UI without source, documentation, API, network, or console inspection. Builders fixed reported failures; later passes rechecked them.",
+    "method": "Fresh-context GPT-6 Astra reviewers receive the URL, privately read local bootstrap credentials, and use browser UI without source, documentation, API, network, or console inspection. Four broad walkthroughs are followed by narrower setup/import reviews. Builders fix reported failures; later passes recheck them.",
     "rounds": [
       {
         "round": 1,
@@ -69,6 +69,21 @@
         "round": 4,
         "scope": "Main saved runtime, actual 1280x720 and 1440x900",
         "result": "Completed setup, collaboration, real prompt copy/paste, session lifecycle, actual approved response and resolution, minimal live notices, unrelated incident exclusion, latest visual explanations and eight-tab stress. Temporary stress tabs closed; four role handoff tabs retained; viewport overrides reset."
+      },
+      {
+        "round": 5,
+        "scope": "Main saved runtime; company setup, People, connection editing and file imports",
+        "result": "Completed corrected CSV/catalog imports, employee create/edit, connection create/edit/delete, and workspace reopening. Found malformed employee data accepted by preview and Confirm still enabled on invalid catalog; invalid data was not committed. Findings led to shared backend preflight validation and disabled invalid confirmations."
+      },
+      {
+        "round": 6,
+        "scope": "Main saved runtime; fresh independent import correction review",
+        "result": "Invalid employee file displayed three validation errors and disabled Confirm. Invalid catalog remained blocked. Corrected unique employee and system imports appeared in People and system search. Changing selected file cleared the old confirmation until previewed again. Repeat-file preview lacked clear add/update disclosure; legitimate stable-ID updates now receive explicit labels and counts."
+      },
+      {
+        "round": 7,
+        "scope": "Main saved runtime; fresh independent repeat-import UI review, 1280x720",
+        "result": "Preview explicitly displayed 0 new profiles / 1 existing profile updated and 0 new systems / 1 existing system updated. Confirmed both files. A further employee repeat held People at 105 with exactly one Review Six Analyst. System map held at 43 nodes / 33 connections with exactly one Review Six Monitor. File replacement removed Confirm; invalid employee file displayed three errors and disabled Confirm. No task-blocking failure. Dialog uses vertical scrolling to reach bottom controls. Reviewer closed only its temporary tab and released browser."
       }
     ],
     "latestVerified": [
@@ -82,7 +97,9 @@
       "Marketing sees newest minimal notice without navigation, dismissal persists, and private incidents stay absent.",
       "Unrelated incident has no configured automatic restart action.",
       "Readable exact incident focus, prominent server-derived outcome, follow-up task explanation, recorded-only replay and restricted-list wording.",
-      "Eight simultaneously signed-in tabs remained usable; pending saves, messages and login completed without the earlier indefinite freeze."
+      "Eight simultaneously signed-in tabs remained usable; pending saves, messages and login completed without the earlier indefinite freeze.",
+      "Malformed employee and catalog files visibly block confirmation. Corrected files import into actual People/system views; changing the selected file requires another preview.",
+      "Repeat-file previews explicitly distinguish additions from updates. Actual repeat commits kept counts unchanged, with one matching employee and one matching system."
     ],
     "model": {
       "provider": "Brev / vLLM",
@@ -95,105 +112,248 @@
     },
     "screenshots": [
       {
-        "path": "rebuild/eight-tabs-save.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/eight-tabs-save.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "39a61bf3230322eda81706dda68b839c2659adba62a55ae3b9127e1110c7f42e"
       },
       {
-        "path": "rebuild/focused-verified-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/focused-verified-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "4b7a4f46030073923ec2165a6023dd273acce35d8368509af1f3d3c5eed9f153"
       },
       {
-        "path": "rebuild/focused-verified-1440x900.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/focused-verified-1440x900.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "24aa599bfe80b08451c1b5ebb2c38552d244ce5ce8ca62523141a36e3e8200bc"
       },
       {
-        "path": "rebuild/focused-verified-map-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/focused-verified-map-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "ad78a5b1b669c8fe307e0c518e34951a739c79e91fa13f7603f343d9a6d71946"
       },
       {
-        "path": "rebuild/handoff-manager.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/handoff-data-manager-current.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "046c9cd945a48b261bfec2003eb6653409dc2ebfb94a5459a4ac690cc3eb0c80"
+      },
+      {
+        "path": "rebuild/handoff-engineer-current.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "3765323e5ef876e235181940a73bf67017b46c6220e1301e14aeb700dbedb19e"
+      },
+      {
+        "path": "rebuild/handoff-manager.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "d152001264f59e8df0512711e51ab3b52f3b5c49419048862c2c41a4590ab965"
       },
       {
-        "path": "rebuild/live-analysis-1440.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/handoff-marketing-current.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "68b39d5557d4708a8a9b626acc29e239ca01407181a42160313096171d96cf1d"
+      },
+      {
+        "path": "rebuild/handoff-workspace-current.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "00a045c178798105638ed91de024bade1a6896161013e57275092715e5499faf"
+      },
+      {
+        "path": "rebuild/import-catalog-imported.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "30f9a1b14395513f66b42fe6f6b7782ea0b57edc0b520ac991260c3b58d360c1"
+      },
+      {
+        "path": "rebuild/import-changed-file-reset.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "068a9277c042d67554a6fe235ba160eba5c2f81d4a35155872f38779cfe17897"
+      },
+      {
+        "path": "rebuild/import-employees-imported.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "30f9a1b14395513f66b42fe6f6b7782ea0b57edc0b520ac991260c3b58d360c1"
+      },
+      {
+        "path": "rebuild/import-final-catalog-after-repeat.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "687b22620adafd1c286409b981e0ce625cafb428099aa8f59ef5db31630b0a31"
+      },
+      {
+        "path": "rebuild/import-final-catalog-repeat-preview.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "39ced5ebbc7fbf0676b7a9bcfdae0393b6429681b18825dbd7796efd0c3521b2"
+      },
+      {
+        "path": "rebuild/import-final-changed-file-clears-confirm.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "feb321fefee138ce570a76881c298c106af964befe114bf93bb4f8a345aa2c67"
+      },
+      {
+        "path": "rebuild/import-final-employee-after-second-repeat.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "9749de50151777367469f84f9fc0d31b7726caaca0ce88cd783e2a0d5548bcc8"
+      },
+      {
+        "path": "rebuild/import-final-employee-repeat-preview.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "0dd4f1e650a848a7a099a437540daa726245b68f2cd2969a481c9305853b2396"
+      },
+      {
+        "path": "rebuild/import-final-employee-single-result.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "3b2c58a1bf897cc444a7e53f37481224830a1ab86b2b3999be47d12d04dc0688"
+      },
+      {
+        "path": "rebuild/import-final-invalid-employee-blocked.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "3e92f1dc7ed6c6f33519249c1b1e95e920b7892dd388bd1238c4fa93ed97b08e"
+      },
+      {
+        "path": "rebuild/import-invalid-catalog.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "cf004f06ee9e986771e0fa46fd4d0b40f62f9f3d6b730725d249d52be73dda25"
+      },
+      {
+        "path": "rebuild/import-invalid-employees.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "c06925807b138bd78b8277e6b54d4c5a2f90679962c52c2446d21bc939557480"
+      },
+      {
+        "path": "rebuild/import-valid-catalog-preview.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "c16174b07e678d84ec0969f9a6baa51f70497091b92c9a845254fe43d8a5af28"
+      },
+      {
+        "path": "rebuild/import-valid-employees-preview.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
+        "sha256": "6db50265071a3af5a364445dfb0de3f2d3379103ba43a364f90cb0fb82bb5a89"
+      },
+      {
+        "path": "rebuild/live-analysis-1440.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "c575f4699d983bfd74a8bbf9dbbc63aefc7b6e5293228b923287c3c70071b597"
       },
       {
-        "path": "rebuild/marketing-active-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/marketing-active-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "c193a60ecc59038fcebe67dc285e6f7fbc1ada71d201f81ff7805831db48ad62"
       },
       {
-        "path": "rebuild/marketing-resolved-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/marketing-resolved-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "9d6cae5bcf630dc48281992c8f59a5300cb6d529658e239e761fcfb3c6d9d63e"
       },
       {
-        "path": "rebuild/marketing-visibility-1440x900.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/marketing-visibility-1440x900.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "b585bcb934e60bae3d1cddb8d383410d62f06edb422b43063a61c0c0b8bfa761"
       },
       {
-        "path": "rebuild/node-created-1280.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/node-created-1280.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "0dc6bae077ec77f192ad3f20c4ed452d6d855c009f4835f45851ce570bd8d58f"
       },
       {
-        "path": "rebuild/ordinary-no-action-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/ordinary-no-action-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "7f74f9e0fdf4f55aea3e41bb1d80185f307048f1c7ff1c3f2780dd21b39581e0"
       },
       {
-        "path": "rebuild/replay-paused-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/replay-paused-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "83257918ce915ae0da8c9cbcaa6f06fb6a037c939800a1a97183ab1d683cdcd2"
       },
       {
-        "path": "rebuild/resolution-actions-1440x900.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/resolution-actions-1440x900.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "aeb89eb6e9790de4bf8d92b6284b36b5132ac55a02830227f547aa1ab36c739f"
       },
       {
-        "path": "rebuild/resolved-actions-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/resolved-actions-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "5697a21ce69d9be5669435febbc54055ca66193b9e7b0fbd2af0a8c1bd5caf3e"
       },
       {
-        "path": "rebuild/resolved-followups-1440x900.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/resolved-followups-1440x900.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "416565cb79b2639ac0db64206d224dc1f8493e584645c4cc36045546794591f6"
       },
       {
-        "path": "rebuild/responder-progress-1280x720.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/responder-progress-1280x720.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 720,
         "sha256": "a9f080540a54c767beadfb3876fb65b0abb3f3ab1257991475e0d1ad55045837"
       },
       {
-        "path": "rebuild/unrelated-action-gating-1440x900.png",
-        "width": 65536,
-        "height": 4292542531,
+        "path": "rebuild/unrelated-action-gating-1440x900.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 900,
         "sha256": "b2b63ce70b3aa600dcbe79ad951d006dd448fa4fec40992cf898ef144609ac45"
       }
     ],
@@ -202,16 +362,18 @@
         "Resolved Overview shows only original observation, without the generated containment UUID suffix; stored evidence remains intact.",
         "Singular node/connection labels checked in actual restricted view.",
         "Four real separate main-chat sign-ins prepared after child review: manager focused verified map, engineer tasks, data-manager conversation, marketing restricted map.",
-        "Read-only source review of latest session and stream changes found no actionable issue."
+        "Read-only source review of latest session and stream changes found no actionable issue.",
+        "After the final backend restart, refreshed all four main-chat accounts. Manager saved Customer job access workspace reopened with three connected nodes at 100%; engineer follow-up tasks, data-manager conversation, and marketing restricted map remained accessible. No new containment execution claimed after restart."
       ],
       "finalTabCount": 4,
       "temporaryViewportOverridesReset": true,
-      "leadArrangedSavedWorkspaceViaRealMcp": true
+      "leadArrangedSavedWorkspaceViaRealMcp": true,
+      "finalManagerView": "Saved ordinary Customer job access workspace, three nodes; existing response proof is historical for its prior target generation."
     }
   },
   "sourceReview": {
     "reviewer": "Dedicated independent GPT-6 Astra security reviewer",
-    "result": "No actionable issue found in bounded read-only review of role-plus-grant administration, scoped reads/writes, incident sharing/revocation, conversations, response authority, client session epochs and stream cleanup.",
+    "result": "No actionable issue found in bounded read-only review of role-plus-grant administration, scoped reads/writes, incident sharing/revocation, conversations, response authority, client session epochs and stream cleanup. Additional import review found a retained-owner reference gap; corrected preflight validates both imported and retained active owners at preview and consume, with no writes on the covered invalid mixed batches. Reviewer confirmed the fix.",
     "assurance": "Not a comprehensive audit or security certification."
   },
   "limitations": [
@@ -223,8 +385,10 @@
     "Normal product chat uses authenticated local server streams, separate from the retained encrypted three-peer protocol on one Mac. No physical radio-mesh claim.",
     "With excessive HTTP/1 tabs, requests may wait for ten-second stream renewal; permanent starvation was addressed, not unlimited-tab performance.",
     "Model/SSH/internet availability is not guaranteed. Backup remains visibly labeled. Analysis, brief and import preview caches are memory-only and scope/revision changes invalidate them.",
-    "Final browser round did not upload a company import or repeat employee deletion/connection deletion. Earlier browser passes and existing import/HTTP checks supply the narrower evidence.",
-    "After-hours coverage is a manual eligibility check, without deployed pager, SMS/email/push delivery or autonomous escalation daemon."
+    "After-hours coverage is a manual eligibility check, without deployed pager, SMS/email/push delivery or autonomous escalation daemon.",
+    "Setup/import follow-ups cover invalid files, corrected single-row imports, employee create/edit, and connection editing/deletion. They are not exhaustive acceptance of all import formats or all employee lifecycle operations.",
+    "Import preflight rejects the covered validation failures before writing. Batch commits still use per-row transactions; process/database crash atomicity for the entire file is not guaranteed.",
+    "At 1280x720, long import previews require vertical scrolling to reach bottom controls."
   ],
   "research": [
     {
@@ -235,32 +399,35 @@
   "sourceFileSha256": {
     "AGENTS.md": "fa7012382409d04cfa5358496ece648acde2133653d89e7804dcd99683b63c07",
     "PRD.md": "6f3bfcd5da936626ce94e67c41c5c5591111499be18bf19cfc1985290d63d6eb",
-    "README.md": "ece34999b6645b38b885e271eb2fc1fae74df90d3b6c7c349c72e26af1628d6e",
+    "README.md": "bb39069c1694f72e90f07ff69caf0b0770c0bd665704aad3fd43dee27d177a5f",
     "apps/tether/canvas-layout.test.ts": "7f73f4cbb760bbe735883d6bc32c0a71abb5ee8eefab979093318277948dffaa",
     "apps/tether/company.test.ts": "7ce486c0cda9bc9745c4185eba2fed58c2a7026638f2e00302a836934e147557",
-    "apps/tether/company.ts": "0a54d5b9d4c33c3fe774980972a0f9a366917b3f76173c5e1ffeef22ce0dc9a7",
+    "apps/tether/company.ts": "8dcafcaef3886e486f5fa467e1c4087d85178e8082d8af53b13cba4444a0cca9",
     "apps/tether/layout-mcp.test.ts": "ddd02771e6e7e3327a75dc984b97dce28231c5a902b3cb8958c51b019e4b46e5",
     "apps/tether/layout-mcp.ts": "73bbef35a29a1d26864634de97ef634a37f94438493e64417c8d96813c0c1093",
     "apps/tether/permissions.test.ts": "35c6450600d962a1f512220aaec5799952ea113f92a048ecbdf4e508a0c2f8e5",
     "apps/tether/permissions.ts": "f020ddd2036b534e0f5614713473db2d9af2ba0cda0338a4a728c4b705501606",
     "apps/tether/projection.test.ts": "dd5ce70c64670c3456585d88cddb0ff5334813c071743264376aed325164584a",
     "apps/tether/public/api.js": "d939943c2f5b0843207fe05842d282f3162769279422bf26fa45c6be58e172c3",
-    "apps/tether/public/app.js": "0c092bc4d39bec55220e0fd77f1468d04307ee45c1e8e84bb05dc6430cdc5aaa",
+    "apps/tether/public/app.js": "711d724fef150905ffd60308e784055b72005094298307b6166ff163da28a387",
     "apps/tether/public/canvas-layout.d.ts": "d6429d2738c8a859d67e333c87fd69d017d8868731f3849e530d0ed9640404e1",
     "apps/tether/public/canvas-layout.js": "353725ea1dfdf0fd2a0d2b7bab2e8fca1d328f86f08f2ccf0f56b0c96fd52523",
     "apps/tether/public/canvas.css": "07f7c7c228e343318baf277be12356c71c6bb9b725f4c2167e402fecc8898f53",
     "apps/tether/public/canvas.js": "d998b49468e7cd7db70fc29638b923fbae23eee17dbcd769897a0055ca183ca4",
-    "apps/tether/public/panels.js": "c9282114462f45a055b08f00a60e63eaaa61dc1a6f4ad4a41a42f7ab497f36cf",
-    "apps/tether/public/styles.css": "be51f5918ff9d0e93810b5a2d52c6718e1be742c9fd35447d37608eebff4951b",
+    "apps/tether/public/panels.js": "4411d17ece5efa07f7d0230c2d19f2bac005d2231ee7702539edc24ea39a8744",
+    "apps/tether/public/styles.css": "a708c0eb9cf193be08d53e14ad910f3a1afd1502a40f59bf00ced3812a6a7080",
     "apps/tether/scheduling.test.ts": "d177d01ed9decbc6cca146ffa968648bc445741c4640d1fe0996669e2dfd9238",
     "apps/tether/scheduling.ts": "34d0f982233375d2a807fc911f79238e8cfa7933210db4281ad8fa67379aaab7",
     "apps/tether/seed.ts": "fde57d92ff2a72299eb39b5221bfd51b13b8c3f8a5c48c16d6d740d6b3419012",
     "apps/tether/server.test.ts": "09d8336c85472592a615e2daad5e4afd6dd1eae2d92dccf3682d33ef1e18e3bd",
-    "apps/tether/server.ts": "dadd2b6fffaf8ed61d2b832bf329ad8c45641f4d3a0b9325ce3b9d16bbeb49f2",
+    "apps/tether/server.ts": "0f3be89cdbc21ec940882436d4795a1c0e1f2e05bf96121c5aa1476a79a70fe8",
     "apps/tether/stream.test.ts": "d5f231fd1fea01025c1c2e5ad285db0dc3e6d68d7c547be421a3b0cc9803474c",
     "apps/tether/types.ts": "69396d0d98e49ec404fb85b53ff85f4704ed27b9c7c1c93860fe370373675584",
     "docs/TETHER-REBUILD-CONTRACT.md": "e1f77a934da3471e4da52d82f42457850729004fcbb9d3460525e7f50b899a92",
-    "docs/TETHER-RUNBOOK.md": "89b09040e725c422de50760686aba3cbf721c668f81e64971fed326f464a958b",
-    "scripts/brev-forward.sh": "165c80f6cc6eb554afd4b478e3ed7e48f1d4c3df0a4a06ae677f7c0439a2896d"
-  }
+    "docs/TETHER-RUNBOOK.md": "31666640d60c4cb30080af5bab9b369eb2b459d0ec9b6921f66d28c2fa1925bb",
+    "scripts/brev-forward.sh": "165c80f6cc6eb554afd4b478e3ed7e48f1d4c3df0a4a06ae677f7c0439a2896d",
+    "apps/tether/imports.ts": "4247d1475b7daaf4fb476947cc43c5c43722dab49a6a2c41970417cf858037a4",
+    "apps/tether/imports.test.ts": "1bea083104ce75c45cf80a30288ac1a5644faf7adba7df0855e6d91952be81cf"
+  },
+  "importFollowupBaseCommit": "0091e13"
 }

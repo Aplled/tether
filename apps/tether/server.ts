@@ -220,7 +220,7 @@ export async function startTetherServer(
     membershipLookup: (id) => company.membershipSnapshot(id),
   });
   auth.bootstrapPresentationAccounts();
-  const imports = new ImportService();
+  const imports = new ImportService(() => company.allState());
   const briefs = new Map<string, TaskBrief>();
   const responseChecks = new Map<
     string,

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CompanyNode, Member } from "./types.ts";
+import type { CompanyNode, CompanyState, Member } from "./types.ts";
 
 export type ImportFormat = "employees_csv" | "systems_csv" | "catalog_json";
 export type ImportPreview = {
@@ -15,6 +15,54 @@ export type ImportPreview = {
 const MAX_BYTES = 128 * 1024;
 const MAX_ROWS = 250;
 const safeId = (value: string) => /^[a-z][a-z0-9-]{1,99}$/.test(value);
+
+type ImportContext = Pick<
+  CompanyState,
+  "departments" | "members" | "nodes" | "regions"
+>;
+
+export function memberFieldErrors(
+  member: Pick<
+    Member,
+    "name" | "email" | "departmentId" | "title" | "timezone"
+  >,
+  departmentIds: string[],
+): string[] {
+  const errors: string[] = [];
+  for (const [field, limit] of [
+    ["name", 120],
+    ["title", 200],
+  ] as const)
+    if (
+      typeof member[field] !== "string" ||
+      !member[field].trim() ||
+      member[field].length > limit
+    )
+      errors.push(
+        `${field} is required and must be at most ${limit} characters`,
+      );
+  if (
+    typeof member.email !== "string" ||
+    member.email.length > 200 ||
+    !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(member.email)
+  )
+    errors.push("email must be a valid address of at most 200 characters");
+  if (!departmentIds.includes(member.departmentId))
+    errors.push("departmentId must reference an existing department");
+  try {
+    if (
+      typeof member.timezone !== "string" ||
+      !member.timezone ||
+      member.timezone.length > 100 ||
+      /^[+-]/.test(member.timezone)
+    )
+      throw new Error();
+    new Intl.DateTimeFormat("en-US", { timeZone: member.timezone }).format();
+  } catch {
+    errors.push("timezone must be a valid IANA timezone");
+  }
+  return errors;
+}
 
 function csv(content: string): string[][] {
   const result: string[][] = [];
@@ -46,8 +94,14 @@ function csv(content: string): string[][] {
 
 export class ImportService {
   readonly #previews = new Map<string, ImportPreview>();
+  readonly context: (() => ImportContext) | undefined;
+  constructor(context?: () => ImportContext) {
+    this.context = context;
+  }
   preview(format: ImportFormat, content: string): ImportPreview {
     this.#prune();
+    if (!["employees_csv", "systems_csv", "catalog_json"].includes(format))
+      throw new Error("unsupported import format");
     if (Buffer.byteLength(content) > MAX_BYTES)
       throw new Error("import exceeds 128 KiB");
     const errors: string[] = [],
@@ -60,6 +114,17 @@ export class ImportService {
       const header = parsed.shift()?.map((v) => v.trim()) ?? [];
       if (new Set(header).size !== header.length)
         errors.push("duplicate CSV header");
+      const required =
+        format === "employees_csv"
+          ? ["id", "name", "email", "departmentId", "title"]
+          : ["id", "name", "kind", "description", "regionId"];
+      for (const field of required)
+        if (!header.includes(field))
+          errors.push(`missing CSV column: ${field}`);
+      parsed.forEach((values, index) => {
+        if (values.length !== header.length)
+          errors.push(`row ${index + 2}: column count does not match header`);
+      });
       rows = parsed
         .slice(0, MAX_ROWS)
         .map((values, index) =>
@@ -88,6 +153,14 @@ export class ImportService {
             );
       });
     }
+    errors.push(...this.#validate(format, rows));
+    const invalidRows = new Set(
+      errors.flatMap((error) => {
+        const match = /^(?:row|item) (\d+):/.exec(error);
+        return match ? [match[1]] : [];
+      }),
+    ).size;
+    const fileError = errors.some((error) => !/^(?:row|item) \d+:/.test(error));
     const preview: ImportPreview = {
       previewId: `preview-${randomUUID()}`,
       format,
@@ -95,10 +168,8 @@ export class ImportService {
       errors: [...new Set(errors)].slice(0, 100),
       warnings: [...new Set(warnings)].slice(0, 100),
       summary: {
-        valid: errors.length
-          ? Math.max(0, rows.length - errors.length)
-          : rows.length,
-        invalid: errors.length,
+        valid: fileError ? 0 : Math.max(0, rows.length - invalidRows),
+        invalid: fileError ? Math.max(1, rows.length) : invalidRows,
         boundedAt: MAX_ROWS,
       },
       createdAt: new Date().toISOString(),
@@ -106,7 +177,7 @@ export class ImportService {
     this.#previews.set(preview.previewId, preview);
     while (this.#previews.size > 20)
       this.#previews.delete(this.#previews.keys().next().value as string);
-    return preview;
+    return structuredClone(preview);
   }
   consume(previewId: string): ImportPreview {
     this.#prune();
@@ -114,8 +185,127 @@ export class ImportService {
     if (!preview) throw new Error("preview not found or expired");
     if (preview.errors.length)
       throw new Error("preview contains validation errors");
+    const errors = this.#validate(preview.format, preview.rows);
+    if (errors.length)
+      throw new Error(`preview no longer valid: ${errors.join("; ")}`);
     this.#previews.delete(previewId);
     return preview;
+  }
+  #validate(
+    format: ImportFormat,
+    rows: Array<Record<string, unknown>>,
+  ): string[] {
+    const errors: string[] = [],
+      ids = new Set<string>(),
+      emails = new Set<string>();
+    const context = this.context?.();
+    if (!rows.length) errors.push("import contains no records");
+    const memberIds = new Set(
+      context?.members
+        .filter((member) => member.active)
+        .map((member) => member.id),
+    );
+    const nodeIds = new Set([
+      ...(context?.nodes.map((node) => node.id) ?? []),
+      ...rows.map((row) => String(row.id)),
+    ]);
+    rows.forEach((row, index) => {
+      const prefix = `${format === "catalog_json" ? "item" : "row"} ${index + (format === "catalog_json" ? 1 : 2)}: `;
+      const fail = (message: string) => errors.push(prefix + message);
+      for (const value of Object.values(row))
+        if (typeof value === "string" && /[\u0000-\u001f\u007f]/.test(value))
+          fail("control characters are not allowed in fields");
+      const id = String(row.id ?? "");
+      if (!safeId(id)) fail("invalid id");
+      if (ids.has(id)) fail("duplicate id in import");
+      ids.add(id);
+      if (format === "employees_csv") {
+        const member = employeeFromImport(row);
+        for (const error of memberFieldErrors(
+          member,
+          context?.departments.map((dept) => dept.id) ?? [member.departmentId],
+        ))
+          fail(error);
+        const existingMember = context?.members.find(
+          (existing) => existing.id === id,
+        );
+        const managerId = existingMember?.managerId ?? member.managerId;
+        if (managerId && context && !memberIds.has(managerId))
+          fail("managerId must reference an active employee");
+        const email = member.email.toLowerCase();
+        if (
+          emails.has(email) ||
+          context?.members.some(
+            (existing) =>
+              existing.id !== id && existing.email.toLowerCase() === email,
+          )
+        )
+          fail("email already belongs to another employee");
+        emails.add(email);
+        if (
+          row.managerId &&
+          (row.managerId === id ||
+            (context && !memberIds.has(String(row.managerId))))
+        )
+          fail("managerId must reference another active employee");
+        if (row.active && !["true", "false"].includes(String(row.active)))
+          fail("active must be true or false");
+      } else {
+        const node = nodeFromImport(row);
+        if (!node.name.trim() || node.name.length > 160)
+          fail("name is required and must be at most 160 characters");
+        if (!node.description.trim() || node.description.length > 1000)
+          fail("description is required and must be at most 1000 characters");
+        if (
+          ![
+            "service",
+            "component",
+            "workflow",
+            "dataset",
+            "resource",
+            "team",
+            "person",
+          ].includes(node.kind)
+        )
+          fail("invalid system kind");
+        if (!["low", "medium", "high", "critical"].includes(node.criticality))
+          fail("invalid criticality");
+        if (
+          context &&
+          !context.regions.some((region) => region.id === node.regionId)
+        )
+          fail("regionId must reference an existing region");
+        const effectiveOwnerId =
+          node.ownerId ||
+          context?.nodes.find((existing) => existing.id === id)?.ownerId;
+        if (context && effectiveOwnerId && !memberIds.has(effectiveOwnerId))
+          fail("ownerId must reference an active employee");
+        if (
+          ![node.x, node.y].every(
+            (value) => Number.isFinite(value) && Math.abs(value) <= 1_000_000,
+          )
+        )
+          fail("coordinates are outside bounds");
+        if (
+          Array.isArray(row.dependencies) &&
+          row.dependencies.some(
+            (dependency) => `catalog-${String(dependency)}-${id}`.length > 140,
+          )
+        )
+          fail("catalog dependency identifier exceeds 140 characters");
+        for (const dependency of Array.isArray(row.dependencies)
+          ? row.dependencies
+          : [])
+          if (
+            dependency === id ||
+            (context && !nodeIds.has(String(dependency)))
+          )
+            fail(
+              "dependency must reference another existing or imported system",
+            );
+      }
+    });
+    return errors;
   }
   #prune(): void {
     const cutoff = Date.now() - 15 * 60_000;
@@ -151,6 +341,17 @@ export class ImportService {
         errors.push(`item ${index + 1}: invalid metadata.name`);
       if (entity.spec?.owner && typeof entity.spec.owner !== "string")
         errors.push(`item ${index + 1}: invalid owner`);
+      if (
+        entity.spec?.dependsOn !== undefined &&
+        (!Array.isArray(entity.spec.dependsOn) ||
+          entity.spec.dependsOn.length > 20 ||
+          entity.spec.dependsOn.some(
+            (dependency: unknown) => typeof dependency !== "string",
+          ))
+      )
+        errors.push(
+          `item ${index + 1}: dependsOn must contain at most 20 string references`,
+        );
       const dependencies = Array.isArray(entity.spec?.dependsOn)
         ? entity.spec.dependsOn
             .filter((item: unknown) => typeof item === "string")
@@ -207,7 +408,7 @@ export function employeeFromImport(
     ...(row.managerId ? { managerId: String(row.managerId) } : {}),
     active: String(row.active ?? "true") !== "false",
     loginProvisioned: false,
-    timezone: String(row.timezone ?? "America/Chicago"),
+    timezone: String(row.timezone || "America/Chicago"),
     workingHours: [1, 2, 3, 4, 5].map((weekday) => ({
       weekday,
       start: "09:00",
@@ -234,7 +435,7 @@ export function nodeFromImport(
     regionId: String(row.regionId ?? "global"),
     ...(row.ownerId ? { ownerId: String(row.ownerId) } : {}),
     criticality: String(
-      row.criticality ?? "medium",
+      row.criticality || "medium",
     ) as CompanyNode["criticality"],
     status: "healthy",
     x: Number(row.x ?? 100),

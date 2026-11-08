@@ -27,6 +27,8 @@ Live streams renew every ten seconds and recheck the current account on reconnec
 
 After-hours preferences default off; the synthetic Ava account starts with an explicitly configured accepted on-call window. A manager's title does not require overnight work. The coverage check explains current authorized candidates and why others are ineligible, without promoting anyone. It is a manual, point-in-time eligibility check: there is no background pager, acknowledgment timeout, retry loop, or outbound email/SMS/push delivery. Saved notifications appear only inside the app. A user who voluntarily opens the app can read permitted context and explicitly act within their authority.
 
+Imports show the records to add and the existing records to update before confirmation. Reusing a stable ID updates that record. Invalid files keep confirmation disabled; choosing a different file requires another preview. The server checks references again before applying the file. Covered validation errors fail before any rows are written, but the batch is not one crash-atomic database transaction.
+
 ## Model setup
 
 For a hosted NVIDIA endpoint, use the ignored `.env.local` variables in `.env.example`. For the Brev GPU route, follow [BREV-SETUP.md](BREV-SETUP.md). Keep all model keys on the Node server. Brev credits cover running compute; this workflow uses pretrained weights and does not train a model. A provider health check alone does not prove the product performed a live tool-assisted run.
@@ -44,6 +46,6 @@ The November 8 browser rehearsals completed live Brev / vLLM runs using `nvidia/
 
 The historical 60-test response/mesh checkpoint remains in [VERIFICATION.json](evidence/VERIFICATION.json). It is not evidence of live NVIDIA inference or current browser behavior. The encrypted local-peer proof remains a separate three-process protocol test on one Mac; product chat uses authenticated local server streams, not that peer transport.
 
-The [four-round browser record](evidence/REBUILD-VERIFICATION.json) preserves current screenshots, actual copy/paste and collaboration checks, session fixes, current response results, and eight-tab stress behavior. Its limitations distinguish reviewed flows from untested product breadth.
+The [browser record](evidence/REBUILD-VERIFICATION.json) preserves four broad walkthroughs and further setup/import reviews, current screenshots, actual copy/paste and collaboration checks, session fixes, response results, and eight-tab stress behavior. Its limitations distinguish reviewed flows from untested product breadth.
 
 This build is loopback only and uses plaintext synthetic storage. The company action disables the primary retry route in one disposable process; it leaves the process, control, and safe fallback running. The older CLI separately proves a process stop. It has no deployed SSO, production HR/repository synchronization, production incident management rollout, physical radio mesh proof, or uptime guarantee. Analysis, brief, and import-preview caches are memory only; durable company/auth/authority records persist. Restart creates a new target generation, so earlier actions become stale instead of executing against the replacement. A paid GPU and internet tunnel can fail; the rule-based path must stay visibly distinguishable from successful Nemotron inference.
